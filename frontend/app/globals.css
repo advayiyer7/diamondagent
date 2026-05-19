@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#__next {
+  height: 100%;
+}
+
+body {
+  background-color: #08080a;
+  background-image:
+    radial-gradient(1200px 600px at 15% -10%, rgba(220, 190, 120, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 100% 110%, rgba(220, 190, 120, 0.05), transparent 60%),
+    linear-gradient(180deg, #08080a 0%, #0b0b0e 100%);
+  background-attachment: fixed;
+  color: #ece5d3;
+}
+
+/* Custom scrollbar — thin, gold-tinted, dark track. */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(220, 190, 120, 0.18);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(220, 190, 120, 0.32);
+}
+
+/* Selection */
+::selection {
+  background: rgba(220, 190, 120, 0.35);
+  color: #fff;
+}
+
+/* Shimmer placeholder utility — used while generations are loading. */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(220, 190, 120, 0.12) 50%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.2s linear infinite;
+}
+
+/* Premium hairline divider with a gold middle stop. */
+.hairline {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(220, 190, 120, 0.45) 50%,
+    transparent 100%
+  );
+}
+
+/* Focus ring with gold accent. */
+.focus-gold:focus,
+.focus-gold:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(8, 8, 10, 1), 0 0 0 4px rgba(220, 190, 120, 0.55);
+}
+
+/* Glass panel — slightly translucent on the onyx background. */
+.glass {
+  background: linear-gradient(
+    180deg,
+    rgba(22, 22, 27, 0.85) 0%,
+    rgba(13, 13, 16, 0.85) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Gold text gradient for the wordmark. */
+.text-gold {
+  background: linear-gradient(135deg, #f4ead2 0%, #dcbe78 35%, #b8903a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

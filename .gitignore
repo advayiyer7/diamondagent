@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+.env
+.env.local
+*.log
+backend/uploads/
+backend/data.db
+backend/data.db-journal
+backend/data.db-wal
+backend/data.db-shm
+.DS_Store
+.claude/

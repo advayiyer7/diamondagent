@@ -1,0 +1,21 @@
+{
+  "name": "diamond-agent-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/google-vertex": "^2.2.0",
+    "ai": "^4.0.0",
+    "google-auth-library": "^9.0.0",
+    "sqlite-vec": "^0.1.6",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  }
+}
