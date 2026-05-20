@@ -1,145 +1,71 @@
-import { Database } from "bun:sqlite";
-import * as sqliteVec from "sqlite-vec";
-import { mkdirSync, existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { sql } from "drizzle-orm";
+import * as schema from "./schema";
 
-const DB_PATH = resolve(import.meta.dir, "..", "data.db");
+const connectionString =
+  process.env.DATABASE_URL ||
+  "postgres://diamond:diamond@localhost:5432/diamond_agent";
 
-if (!existsSync(dirname(DB_PATH))) mkdirSync(dirname(DB_PATH), { recursive: true });
+const client = postgres(connectionString, { max: 10 });
+export const db = drizzle(client, { schema });
 
-export const db = new Database(DB_PATH);
-db.exec("PRAGMA journal_mode = WAL;");
+// We provision schema in code (rather than drizzle-kit migrate) so a fresh
+// `docker compose up` + `bun run dev` is the only thing you need to do. For
+// 50–60 images we don't bother with an ANN index — exact pgvector distance
+// over a sequential scan is sub-millisecond at this size.
+export async function initSchema(): Promise<void> {
+  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`);
+  await db.execute(sql`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
 
-// Load the sqlite-vec extension. The npm package exposes the path to the
-// platform-specific shared library via getLoadablePath().
-const vecPath = sqliteVec.getLoadablePath();
-db.loadExtension(vecPath);
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS images (
-    id TEXT PRIMARY KEY,
-    filename TEXT NOT NULL,
-    path TEXT NOT NULL,
-    mime_type TEXT NOT NULL,
-    uploaded_at INTEGER NOT NULL
-  );
-`);
-
-db.exec(`
-  CREATE VIRTUAL TABLE IF NOT EXISTS image_vectors USING vec0(
-    id TEXT PRIMARY KEY,
-    embedding float[3072]
-  );
-`);
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS generations (
-    id TEXT PRIMARY KEY,
-    prompt TEXT NOT NULL,
-    path TEXT NOT NULL,
-    mime_type TEXT NOT NULL,
-    reference_ids TEXT NOT NULL,
-    created_at INTEGER NOT NULL
-  );
-`);
-
-export type ImageRow = {
-  id: string;
-  filename: string;
-  path: string;
-  mime_type: string;
-  uploaded_at: number;
-};
-
-export type GenerationRow = {
-  id: string;
-  prompt: string;
-  path: string;
-  mime_type: string;
-  reference_ids: string; // JSON-encoded string[]
-  created_at: number;
-};
-
-export function insertImage(row: ImageRow, embedding: Float32Array) {
-  const tx = db.transaction((row: ImageRow, vec: Float32Array) => {
-    db.prepare(
-      "INSERT INTO images (id, filename, path, mime_type, uploaded_at) VALUES (?, ?, ?, ?, ?)",
-    ).run(row.id, row.filename, row.path, row.mime_type, row.uploaded_at);
-    db.prepare("INSERT INTO image_vectors (id, embedding) VALUES (?, ?)").run(
-      row.id,
-      new Uint8Array(vec.buffer, vec.byteOffset, vec.byteLength),
-    );
-  });
-  tx(row, embedding);
-}
-
-export function listImages(): ImageRow[] {
-  return db
-    .prepare("SELECT * FROM images ORDER BY uploaded_at DESC")
-    .all() as ImageRow[];
-}
-
-export function getImage(id: string): ImageRow | null {
-  return (
-    (db.prepare("SELECT * FROM images WHERE id = ?").get(id) as
-      | ImageRow
-      | undefined) ?? null
-  );
-}
-
-export function insertGeneration(row: GenerationRow) {
-  db.prepare(
-    "INSERT INTO generations (id, prompt, path, mime_type, reference_ids, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(
-    row.id,
-    row.prompt,
-    row.path,
-    row.mime_type,
-    row.reference_ids,
-    row.created_at,
-  );
-}
-
-export function listGenerations(): GenerationRow[] {
-  return db
-    .prepare("SELECT * FROM generations ORDER BY created_at DESC")
-    .all() as GenerationRow[];
-}
-
-export function getGeneration(id: string): GenerationRow | null {
-  return (
-    (db.prepare("SELECT * FROM generations WHERE id = ?").get(id) as
-      | GenerationRow
-      | undefined) ?? null
-  );
-}
-
-export function vectorSearch(
-  queryVec: Float32Array,
-  topK: number,
-): ImageRow[] {
-  const bytes = new Uint8Array(
-    queryVec.buffer,
-    queryVec.byteOffset,
-    queryVec.byteLength,
-  );
-  const rows = db
-    .prepare(
-      `
-      SELECT v.id AS id, v.distance AS distance
-      FROM image_vectors v
-      WHERE v.embedding MATCH ?
-        AND k = ?
-      ORDER BY v.distance
-      `,
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS images (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      filename TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      embedding vector(3072),
+      uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
-    .all(bytes, topK) as Array<{ id: string; distance: number }>;
+  `);
 
-  const results: ImageRow[] = [];
-  const getStmt = db.prepare("SELECT * FROM images WHERE id = ?");
-  for (const r of rows) {
-    const img = getStmt.get(r.id) as ImageRow | undefined;
-    if (img) results.push(img);
-  }
-  return results;
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL DEFAULT 'New conversation',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_id UUID NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      meta JSONB,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS messages_session_idx
+    ON messages(session_id, created_at)
+  `);
+
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS generations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      prompt TEXT NOT NULL,
+      path TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      reference_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+      session_id UUID REFERENCES sessions(id) ON DELETE SET NULL,
+      message_id UUID REFERENCES messages(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  console.log("[db] schema ready");
 }

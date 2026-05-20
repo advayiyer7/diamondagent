@@ -65,17 +65,45 @@ export type GenerationRecord = {
 export async function generateDesign(
   prompt: string,
   referenceIds: string[],
+  opts: { baseGenerationId?: string } = {},
 ): Promise<GenerationRecord> {
   const res = await fetch(`${API_BASE}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, referenceIds }),
+    body: JSON.stringify({
+      prompt,
+      referenceIds,
+      ...(opts.baseGenerationId ? { baseGenerationId: opts.baseGenerationId } : {}),
+    }),
   });
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`generate failed (${res.status}): ${err}`);
   }
   return (await res.json()) as GenerationRecord;
+}
+
+export type Candidate = {
+  id: string;
+  filename: string;
+  url: string;
+  distance: number;
+};
+
+export async function findReferences(
+  query: string,
+  topK?: number,
+): Promise<{ query: string; candidates: Candidate[] }> {
+  const res = await fetch(`${API_BASE}/api/references`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, ...(topK ? { topK } : {}) }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`findReferences failed (${res.status}): ${err}`);
+  }
+  return (await res.json()) as { query: string; candidates: Candidate[] };
 }
 
 export async function listGenerations(): Promise<GenerationRecord[]> {

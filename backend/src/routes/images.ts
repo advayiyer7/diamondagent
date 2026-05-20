@@ -1,29 +1,40 @@
 import { readFileSync, existsSync } from "node:fs";
+import { eq, desc } from "drizzle-orm";
 
-import { listImages, getImage } from "../db";
+import { db } from "../db";
+import { images } from "../schema";
 import { jsonResponse, errorResponse } from "../http";
 
-export function handleList(): Response {
-  const rows = listImages();
+export async function handleList(): Promise<Response> {
+  const rows = await db
+    .select({
+      id: images.id,
+      filename: images.filename,
+      uploadedAt: images.uploadedAt,
+    })
+    .from(images)
+    .orderBy(desc(images.uploadedAt));
+
   return jsonResponse({
     images: rows.map((r) => ({
       id: r.id,
       filename: r.filename,
       url: `/api/images/${r.id}`,
-      uploaded_at: r.uploaded_at,
+      uploaded_at: r.uploadedAt.getTime(),
     })),
   });
 }
 
-export function handleGet(id: string): Response {
-  const row = getImage(id);
+export async function handleGet(id: string): Promise<Response> {
+  const [row] = await db.select().from(images).where(eq(images.id, id));
   if (!row) return errorResponse(404, "Image not found");
   if (!existsSync(row.path)) return errorResponse(410, "File missing on disk");
+
   const bytes = readFileSync(row.path);
   return new Response(bytes, {
     status: 200,
     headers: {
-      "Content-Type": row.mime_type,
+      "Content-Type": row.mimeType,
       "Cache-Control": "public, max-age=3600",
     },
   });

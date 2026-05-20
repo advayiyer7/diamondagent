@@ -1,17 +1,28 @@
 import { handleUpload } from "./routes/upload";
 import { handleList, handleGet } from "./routes/images";
 import { handleChat } from "./routes/chat";
+import { handleReferences } from "./routes/references";
 import {
   handleGenerate,
   handleListGenerations,
   handleGetGeneration,
 } from "./routes/generate";
 import { corsHeaders, jsonResponse, errorResponse, preflight } from "./http";
+import { initSchema } from "./db";
 
 const PORT = Number(process.env.PORT || 3001);
 
-// Eager import so DB + sqlite-vec init at startup, not on first request.
-await import("./db");
+await initSchema();
+
+const UUID = "[A-Za-z0-9-]+";
+const imageByIdRe = new RegExp(`^/api/images/(${UUID})$`);
+const generatedByIdRe = new RegExp(`^/api/generated/(${UUID})$`);
+
+async function attachCors(res: Response): Promise<Response> {
+  const headers = new Headers(res.headers);
+  for (const [k, v] of Object.entries(corsHeaders())) headers.set(k, v);
+  return new Response(await res.arrayBuffer(), { status: res.status, headers });
+}
 
 const server = Bun.serve({
   port: PORT,
@@ -26,37 +37,39 @@ const server = Bun.serve({
       if (pathname === "/health" && method === "GET") {
         return jsonResponse({ ok: true });
       }
+
       if (pathname === "/api/upload" && method === "POST") {
         return await handleUpload(req);
       }
+
+      if (pathname === "/api/images" && method === "GET") {
+        return await handleList();
+      }
+
+      const imgMatch = pathname.match(imageByIdRe);
+      if (imgMatch && method === "GET") {
+        return await attachCors(await handleGet(imgMatch[1]!));
+      }
+
       if (pathname === "/api/chat" && method === "POST") {
         return await handleChat(req);
       }
-      if (pathname === "/api/images" && method === "GET") {
-        return handleList();
+
+      if (pathname === "/api/references" && method === "POST") {
+        return await handleReferences(req);
       }
+
       if (pathname === "/api/generate" && method === "POST") {
         return await handleGenerate(req);
       }
+
       if (pathname === "/api/generated" && method === "GET") {
-        return handleListGenerations();
+        return await handleListGenerations();
       }
 
-      const imgMatch = pathname.match(/^\/api\/images\/([A-Za-z0-9-]+)$/);
-      if (imgMatch && method === "GET") {
-        const res = handleGet(imgMatch[1]!);
-        // Attach CORS to the binary response too.
-        const headers = new Headers(res.headers);
-        for (const [k, v] of Object.entries(corsHeaders())) headers.set(k, v);
-        return new Response(res.body, { status: res.status, headers });
-      }
-
-      const genMatch = pathname.match(/^\/api\/generated\/([A-Za-z0-9-]+)$/);
+      const genMatch = pathname.match(generatedByIdRe);
       if (genMatch && method === "GET") {
-        const res = handleGetGeneration(genMatch[1]!);
-        const headers = new Headers(res.headers);
-        for (const [k, v] of Object.entries(corsHeaders())) headers.set(k, v);
-        return new Response(res.body, { status: res.status, headers });
+        return await attachCors(await handleGetGeneration(genMatch[1]!));
       }
 
       return errorResponse(404, `No route for ${method} ${pathname}`);

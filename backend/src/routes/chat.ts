@@ -1,4 +1,4 @@
-import { runAgent } from "../agent";
+import { searchLibrary } from "../search";
 import { jsonResponse, errorResponse } from "../http";
 
 export async function handleChat(req: Request): Promise<Response> {
@@ -13,10 +13,10 @@ export async function handleChat(req: Request): Promise<Response> {
     return errorResponse(400, "Field 'message' must be a non-empty string");
   }
   try {
-    const result = await runAgent(message);
+    const result = await searchLibrary(message.trim());
     return jsonResponse(result);
   } catch (err) {
-    console.error("[chat] agent error:", err);
-    return errorResponse(500, `Agent failed: ${(err as Error).message}`);
+    console.error("[chat] search error:", err);
+    return errorResponse(500, `Search failed: ${(err as Error).message}`);
   }
 }
