@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Diamond — light editorial identity.
+  Ivory base, gold and silver metallic accents. Inspired by Cartier,
+  Van Cleef & Arpels, Tiffany, Bulgari. Light luxury, never dark mode.
+*/
+
 html,
 body,
 #__next {
@@ -9,83 +15,139 @@ body,
 }
 
 body {
-  background-color: #08080a;
+  background-color: #faf7ef; /* ivory-100 */
   background-image:
-    radial-gradient(1200px 600px at 15% -10%, rgba(220, 190, 120, 0.08), transparent 60%),
-    radial-gradient(900px 500px at 100% 110%, rgba(220, 190, 120, 0.05), transparent 60%),
-    linear-gradient(180deg, #08080a 0%, #0b0b0e 100%);
+    /* Warm gold radial in the upper-left — atmosphere, not decoration. */
+    radial-gradient(1200px 700px at 8% -5%, rgba(212, 179, 82, 0.08), transparent 60%),
+    /* Cool silver radial in the lower-right corner. */
+    radial-gradient(900px 600px at 100% 105%, rgba(199, 199, 203, 0.05), transparent 60%);
   background-attachment: fixed;
-  color: #ece5d3;
+  color: #2c2620; /* ink-800 */
+  font-feature-settings: "ss01", "kern";
 }
 
-/* Custom scrollbar — thin, gold-tinted, dark track. */
+/* Thin warm scrollbars on a bone track. */
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 *::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f0ebe0; /* bone-100 */
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(220, 190, 120, 0.18);
+  background: #d4b352; /* gold-400 */
   border-radius: 4px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(220, 190, 120, 0.32);
+  background: #b89028; /* gold-500 */
 }
 
-/* Selection */
+/* Warm gold selection. */
 ::selection {
-  background: rgba(220, 190, 120, 0.35);
-  color: #fff;
+  background: rgba(212, 179, 82, 0.35);
+  color: #1a1611; /* ink-900 */
 }
 
-/* Shimmer placeholder utility — used while generations are loading. */
+/* Shimmer — gold sweep across bone. Used for loading placeholders + wordmark. */
 .shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.02) 0%,
-    rgba(220, 190, 120, 0.12) 50%,
-    rgba(255, 255, 255, 0.02) 100%
+    #e3dccb 0%,
+    #e6cc7a 25%,
+    #d4b352 50%,
+    #e6cc7a 75%,
+    #e3dccb 100%
   );
   background-size: 200% 100%;
-  animation: shimmer 2.2s linear infinite;
+  animation: shimmer 3s linear infinite;
 }
 
-/* Premium hairline divider with a gold middle stop. */
+/* Hairline divider — bone, gold middle stop. */
 .hairline {
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(220, 190, 120, 0.45) 50%,
+    rgba(184, 144, 40, 0.32) 50%,
     transparent 100%
   );
 }
 
-/* Focus ring with gold accent. */
+/* Focus ring — gold halo. */
 .focus-gold:focus,
 .focus-gold:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(8, 8, 10, 1), 0 0 0 4px rgba(220, 190, 120, 0.55);
+  box-shadow: 0 0 0 2px #faf7ef, 0 0 0 4px rgba(184, 144, 40, 0.45);
 }
 
-/* Glass panel — slightly translucent on the onyx background. */
+/* Glass — now a frosted ivory panel, not dark. */
 .glass {
-  background: linear-gradient(
-    180deg,
-    rgba(22, 22, 27, 0.85) 0%,
-    rgba(13, 13, 16, 0.85) 100%
-  );
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, rgba(253, 252, 248, 0.88) 0%, rgba(250, 247, 239, 0.85) 100%);
+  backdrop-filter: blur(10px) saturate(1.05);
+  -webkit-backdrop-filter: blur(10px) saturate(1.05);
+  border: 1px solid rgba(210, 200, 176, 0.6); /* bone-300 hairline */
 }
 
-/* Gold text gradient for the wordmark. */
+/* Wordmark gold gradient — text-fill. */
 .text-gold {
-  background: linear-gradient(135deg, #f4ead2 0%, #dcbe78 35%, #b8903a 100%);
+  background: linear-gradient(135deg, #d4b352 0%, #b89028 45%, #9a7619 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+/* Animated wordmark — gold gradient that slowly drifts. */
+.text-gold-animated {
+  background: linear-gradient(
+    100deg,
+    #b89028 0%,
+    #d4b352 25%,
+    #e6cc7a 50%,
+    #d4b352 75%,
+    #b89028 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: wordmark-shimmer 8s linear infinite;
+}
+
+/* Editorial italic caption. */
+.caption-italic {
+  font-family: var(--font-display), "Playfair Display", Georgia, serif;
+  font-style: italic;
+  color: #4a4138; /* ink-700 */
+}
+
+/* Animated gold underline used by the active tab. */
+.gold-underline {
+  position: relative;
+}
+.gold-underline::after {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: -1px;
+  height: 1px;
+  background: #b89028; /* gold-500 */
+  transform-origin: center;
+  animation: underline-grow 0.45s ease-out forwards;
+}
+
+/* Chrome autofill — keep it on the light theme. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: #2c2620 !important;
+  -webkit-box-shadow: 0 0 0 1000px #fdfcf8 inset !important;
+  caret-color: #b89028;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+input,
+textarea {
+  caret-color: #b89028;
 }

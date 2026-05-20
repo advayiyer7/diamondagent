@@ -56,11 +56,10 @@ export function UploadZone({ onUploaded }: { onUploaded: () => void }) {
       }}
       onClick={() => !busy && inputRef.current?.click()}
       className={
-        "relative rounded-xl px-6 py-5 cursor-pointer transition select-none " +
-        "border border-dashed " +
+        "relative rounded-sm px-7 py-6 cursor-pointer transition-all duration-300 select-none border " +
         (dragOver
-          ? "border-champagne-300/80 bg-champagne-300/5 shadow-glow"
-          : "border-white/10 bg-onyx-900/60 hover:border-champagne-300/40 hover:bg-onyx-800/60")
+          ? "border-solid border-gold-500 bg-ivory-50 shadow-[0_0_28px_rgba(184,144,40,0.22)]"
+          : "border-dashed border-bone-300 bg-ivory-50 hover:border-gold-500/60 hover:bg-ivory-50/80")
       }
     >
       <input
@@ -74,16 +73,16 @@ export function UploadZone({ onUploaded }: { onUploaded: () => void }) {
           e.target.value = "";
         }}
       />
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-full bg-champagne-300/10 border border-champagne-300/30 flex items-center justify-center shadow-glow">
+      <div className="flex items-center gap-5">
+        <div className="w-11 h-11 rounded-full bg-gold-300/15 border border-gold-400/40 flex items-center justify-center">
           <svg
             viewBox="0 0 24 24"
             width="20"
             height="20"
             fill="none"
             stroke="currentColor"
-            strokeWidth="1.6"
-            className="text-champagne-200"
+            strokeWidth="1.4"
+            className="text-gold-600"
           >
             <path d="M12 16V4m0 0-4 4m4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" />
@@ -92,27 +91,31 @@ export function UploadZone({ onUploaded }: { onUploaded: () => void }) {
         <div className="flex-1 min-w-0">
           {busy ? (
             <>
-              <p className="text-sm text-ivory">
+              <p className="text-sm text-ink-900">
                 Uploading {progress?.done}/{progress?.total}…
               </p>
-              <div className="mt-2 h-1 w-full rounded-full bg-onyx-700 overflow-hidden">
+              <div className="mt-2.5 h-[3px] w-full bg-bone-200 overflow-hidden rounded-full">
                 <div
-                  className="h-full bg-gold-gradient transition-all duration-300"
+                  className="h-full bg-gold-gradient transition-all duration-500 rounded-full"
                   style={{ width: `${pct}%` }}
                 />
               </div>
             </>
           ) : (
             <>
-              <p className="text-sm text-ivory">
+              <p className="text-sm text-ink-900 font-medium tracking-wide">
                 Drop PNG or JPEG images here, or click to browse.
               </p>
-              <p className="text-[11px] text-onyx-300 mt-1 tracking-wide">
+              <p className="text-[11px] text-ink-500 mt-1 tracking-wide caption-italic">
                 Each image is embedded and indexed for search & reference.
               </p>
             </>
           )}
-          {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+          {error && (
+            <p className="text-xs text-red-800 bg-red-50 border border-red-200 rounded-sm px-2 py-1 mt-2">
+              {error}
+            </p>
+          )}
         </div>
       </div>
     </div>

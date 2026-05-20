@@ -5,41 +5,60 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        onyx: {
-          950: "#08080a",
-          900: "#0d0d10",
-          800: "#16161b",
-          700: "#1d1d23",
-          600: "#26262d",
-          500: "#3a3a44",
-          400: "#5b5b67",
-          300: "#8a8a96",
+        ivory: {
+          50: "#fdfcf8",
+          100: "#faf7ef",
+          200: "#f3ede0",
+          300: "#ebe2cc",
+          DEFAULT: "#faf7ef",
         },
-        champagne: {
-          50: "#fbf6ec",
-          100: "#f4ead2",
-          200: "#e8d4a5",
-          300: "#dcbe78",
-          400: "#d0a84b",
-          500: "#b8903a",
-          600: "#94722d",
-          700: "#6f5522",
+        bone: {
+          100: "#f0ebe0",
+          200: "#e3dccb",
+          300: "#d2c8b0",
+          400: "#b9ad8e",
         },
-        ivory: "#f6f1e6",
+        gold: {
+          300: "#e6cc7a",
+          400: "#d4b352",
+          500: "#b89028",
+          600: "#9a7619",
+          700: "#7a5d11",
+        },
+        silver: {
+          200: "#e5e5e7",
+          300: "#c7c7cb",
+          400: "#a8a8ad",
+          500: "#8a8a90",
+        },
+        ink: {
+          400: "#8a7d6e",
+          500: "#6b5f52",
+          700: "#4a4138",
+          800: "#2c2620",
+          900: "#1a1611",
+        },
       },
       fontFamily: {
-        display: ["var(--font-display)", "Georgia", "serif"],
+        display: ["var(--font-display)", "Playfair Display", "Cormorant Garamond", "Georgia", "serif"],
         sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        glow: "0 0 0 1px rgba(220,190,120,0.25), 0 8px 40px -12px rgba(220,190,120,0.35)",
-        card: "0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 40px -16px rgba(0,0,0,0.6)",
+        // Warm, subtle — never harsh black.
+        glow: "0 0 0 1px rgba(184,144,40,0.18), 0 8px 32px -12px rgba(184,144,40,0.28)",
+        card: "0 2px 24px rgba(184,144,40,0.06)",
+        elevated: "0 0 0 1px rgba(184,144,40,0.10), 0 24px 60px -28px rgba(74,65,56,0.18)",
+        soft: "0 1px 0 rgba(184,144,40,0.10) inset",
       },
       backgroundImage: {
         "gold-gradient":
-          "linear-gradient(135deg, #f4ead2 0%, #dcbe78 35%, #b8903a 100%)",
-        "panel-grain":
-          "radial-gradient(1200px 600px at 20% -10%, rgba(220,190,120,0.08), transparent 60%), radial-gradient(900px 500px at 100% 110%, rgba(220,190,120,0.06), transparent 60%)",
+          "linear-gradient(135deg, #e6cc7a 0%, #d4b352 35%, #b89028 100%)",
+        "gold-gradient-deep":
+          "linear-gradient(135deg, #d4b352 0%, #b89028 50%, #9a7619 100%)",
+        "silver-gradient":
+          "linear-gradient(135deg, #e5e5e7 0%, #c7c7cb 50%, #a8a8ad 100%)",
+        "ivory-grain":
+          "radial-gradient(1400px 700px at 10% -5%, rgba(212,179,82,0.10), transparent 60%), radial-gradient(1100px 600px at 100% 105%, rgba(199,199,203,0.08), transparent 60%)",
       },
       keyframes: {
         shimmer: {
@@ -54,11 +73,30 @@ const config: Config = {
           "0%, 80%, 100%": { opacity: "0.2" },
           "40%": { opacity: "1" },
         },
+        // Slow text shimmer for the wordmark / loading states.
+        "wordmark-shimmer": {
+          "0%": { backgroundPosition: "0% 50%" },
+          "100%": { backgroundPosition: "200% 50%" },
+        },
+        // Gold underline that draws in under the active tab.
+        "underline-grow": {
+          "0%": { transform: "scaleX(0)", opacity: "0" },
+          "100%": { transform: "scaleX(1)", opacity: "1" },
+        },
       },
       animation: {
         shimmer: "shimmer 2.2s linear infinite",
-        "fade-up": "fade-up 0.3s ease-out both",
+        "shimmer-slow": "shimmer 3s linear infinite",
+        "fade-up": "fade-up 0.4s ease-out both",
         pulseDot: "pulseDot 1.4s ease-in-out infinite",
+        "wordmark-shimmer": "wordmark-shimmer 8s linear infinite",
+        "underline-grow": "underline-grow 0.45s ease-out forwards",
+      },
+      transitionDuration: {
+        DEFAULT: "300ms",
+      },
+      transitionTimingFunction: {
+        DEFAULT: "cubic-bezier(0.22, 0.61, 0.36, 1)",
       },
     },
   },

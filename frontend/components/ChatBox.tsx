@@ -11,14 +11,14 @@ type Msg = {
 
 function TypingDots() {
   return (
-    <div className="flex items-center gap-1.5 px-3 py-2">
-      <span className="w-1.5 h-1.5 rounded-full bg-champagne-300 animate-pulseDot" />
+    <div className="flex items-center gap-1.5 px-4 py-2.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulseDot" />
       <span
-        className="w-1.5 h-1.5 rounded-full bg-champagne-300 animate-pulseDot"
+        className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulseDot"
         style={{ animationDelay: "150ms" }}
       />
       <span
-        className="w-1.5 h-1.5 rounded-full bg-champagne-300 animate-pulseDot"
+        className="w-1.5 h-1.5 rounded-full bg-gold-500 animate-pulseDot"
         style={{ animationDelay: "300ms" }}
       />
     </div>
@@ -59,20 +59,23 @@ export function ChatBox() {
   }
 
   return (
-    <div className="flex flex-col h-full glass rounded-2xl shadow-card overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+    <div className="flex flex-col h-full bg-ivory-50 border border-bone-300 shadow-card overflow-hidden">
+      <div className="flex-1 overflow-y-auto px-8 py-6 space-y-5">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center px-6">
-            <div className="w-12 h-12 rounded-full bg-champagne-300/10 border border-champagne-300/30 flex items-center justify-center mb-4 shadow-glow">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-champagne-200">
+            <div className="w-14 h-14 rounded-full bg-gold-300/15 border border-gold-400/40 flex items-center justify-center mb-5">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-gold-600">
                 <circle cx="11" cy="11" r="7" />
                 <path d="m20 20-3.5-3.5" strokeLinecap="round" />
               </svg>
             </div>
-            <p className="font-display text-lg text-ivory">Search the library</p>
-            <p className="text-xs text-onyx-300 mt-2 max-w-sm leading-relaxed">
+            <p className="font-display text-2xl text-ink-900 tracking-wide">
+              Search the library
+            </p>
+            <p className="text-xs text-ink-500 mt-3 max-w-sm leading-relaxed">
               Ask in plain language — &ldquo;the necklace with three pendants&rdquo;,
-              &ldquo;the bangle with the green stone&rdquo;, &ldquo;which image has a city skyline?&rdquo;
+              &ldquo;the bangle with the green stone&rdquo;, &ldquo;which image has a city
+              skyline?&rdquo;
             </p>
           </div>
         )}
@@ -87,29 +90,29 @@ export function ChatBox() {
             <div className={"max-w-[78%] " + (m.role === "user" ? "items-end" : "items-start")}>
               <div
                 className={
-                  "px-4 py-2.5 text-sm whitespace-pre-wrap leading-relaxed " +
+                  "px-5 py-3 text-sm whitespace-pre-wrap leading-relaxed rounded-sm " +
                   (m.role === "user"
-                    ? "bg-gold-gradient text-onyx-900 rounded-2xl rounded-br-md shadow-glow"
-                    : "bg-onyx-800/80 text-ivory rounded-2xl rounded-bl-md border border-white/5")
+                    ? "bg-gold-gradient text-ink-900 shadow-glow font-medium"
+                    : "bg-ivory-50 text-ink-800 border border-bone-300")
                 }
               >
                 {m.text}
               </div>
               {m.images && m.images.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2.5">
                   {m.images.map((img) => (
                     <figure
                       key={img.id}
-                      className="group relative rounded-lg overflow-hidden border border-white/10 bg-onyx-800"
+                      className="group relative rounded-sm overflow-hidden border border-bone-300 bg-ivory-50 transition-all duration-300 hover:border-gold-500 hover:shadow-[0_0_18px_rgba(199,199,203,0.4)]"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imageUrl(img.url)}
                         alt={img.filename}
-                        className="w-36 h-36 object-cover transition group-hover:scale-[1.03]"
+                        className="w-36 h-36 object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                       />
                       <figcaption
-                        className="absolute bottom-0 left-0 right-0 px-2 py-1 text-[10px] text-ivory bg-onyx-950/80 truncate"
+                        className="absolute bottom-0 left-0 right-0 px-2 py-1 text-[10px] text-ivory-50 bg-ink-900/80 truncate"
                         title={img.filename}
                       >
                         {img.filename}
@@ -123,7 +126,7 @@ export function ChatBox() {
         ))}
         {busy && (
           <div className="flex justify-start animate-fade-up">
-            <div className="bg-onyx-800/80 border border-white/5 rounded-2xl rounded-bl-md">
+            <div className="bg-ivory-50 border border-bone-300 rounded-sm">
               <TypingDots />
             </div>
           </div>
@@ -131,23 +134,27 @@ export function ChatBox() {
         <div ref={endRef} />
       </div>
 
+      {/* Editorial composer — single bottom hairline, no full border. */}
       <form
         onSubmit={submit}
-        className="border-t border-white/5 bg-onyx-900/70 px-4 py-3 flex gap-2"
+        className="border-t border-bone-300 bg-ivory-100/40 px-8 py-5 flex items-end gap-4"
       >
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Ask about your images…"
-          className="flex-1 bg-onyx-800/70 border border-white/5 rounded-full px-4 py-2 text-sm text-ivory placeholder:text-onyx-300 focus-gold transition"
+          className="flex-1 bg-transparent border-0 border-b border-bone-300 focus:border-gold-500 focus:outline-none focus:ring-0 px-1 py-2 text-base text-ink-900 placeholder:text-ink-400 placeholder:italic transition-colors duration-300"
           disabled={busy}
         />
         <button
           type="submit"
           disabled={busy || !input.trim()}
-          className="bg-gold-gradient text-onyx-900 text-xs uppercase tracking-[0.2em] rounded-full px-5 py-2 font-medium shadow-glow disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition focus-gold"
+          aria-label="Send"
+          className="bg-gold-500 hover:bg-gold-600 text-ink-900 w-10 h-10 rounded-full flex items-center justify-center shadow-glow disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 focus-gold"
         >
-          Send
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
       </form>
     </div>

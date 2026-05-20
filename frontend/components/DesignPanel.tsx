@@ -61,24 +61,24 @@ type SelectProps = {
 
 function Select({ label, value, onChange, options, required, disabled }: SelectProps) {
   return (
-    <label className={"flex flex-col gap-1 " + (disabled ? "opacity-40" : "")}>
-      <span className="text-[10px] uppercase tracking-[0.2em] text-onyx-300">
+    <label className={"flex flex-col gap-1.5 " + (disabled ? "opacity-40" : "")}>
+      <span className="text-[10px] uppercase tracking-[0.22em] text-ink-500 font-medium">
         {label}
-        {required && <span className="text-champagne-300 ml-1">*</span>}
+        {required && <span className="text-gold-700 ml-1">*</span>}
       </span>
       <div className="relative">
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
-          className="appearance-none w-full bg-onyx-800/70 border border-white/5 rounded-lg pl-2.5 pr-7 py-1.5 text-xs text-ivory focus-gold transition cursor-pointer hover:border-champagne-300/40 disabled:cursor-not-allowed"
+          className="appearance-none w-full bg-ivory-50 border border-bone-300 rounded-sm pl-3 pr-7 py-2 text-xs text-ink-800 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-300/40 transition-colors duration-300 cursor-pointer hover:border-bone-400 disabled:cursor-not-allowed"
         >
           <option value="">— Any —</option>
           {options.map((o) => (
             <option key={o} value={o}>{o}</option>
           ))}
         </select>
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-onyx-300">
+        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-ink-500">
           ▾
         </span>
       </div>
@@ -95,8 +95,10 @@ type PillsProps = {
 
 function Pills({ label, options, selected, onToggle }: PillsProps) {
   return (
-    <div className="flex flex-col gap-2">
-      <span className="text-[10px] uppercase tracking-[0.2em] text-onyx-300">{label}</span>
+    <div className="flex flex-col gap-2.5">
+      <span className="text-[10px] uppercase tracking-[0.22em] text-ink-500 font-medium">
+        {label}
+      </span>
       <div className="flex flex-wrap gap-1.5">
         {options.map((o) => {
           const on = selected.has(o);
@@ -106,10 +108,10 @@ function Pills({ label, options, selected, onToggle }: PillsProps) {
               type="button"
               onClick={() => onToggle(o)}
               className={
-                "px-2.5 py-1 rounded-full text-[11px] tracking-wide transition border focus-gold " +
+                "px-3 py-1 rounded-sm text-[11px] tracking-wide transition-all duration-300 border focus-gold " +
                 (on
-                  ? "bg-gold-gradient text-onyx-900 border-champagne-300 shadow-glow"
-                  : "bg-onyx-800/70 text-ivory border-white/5 hover:border-champagne-300/40")
+                  ? "bg-gold-gradient text-ink-900 border-gold-500 shadow-glow font-medium"
+                  : "bg-ivory-50 text-ink-700 border-bone-300 hover:border-gold-500/60 hover:text-ink-900")
               }
             >
               {o}
@@ -139,12 +141,12 @@ function ReferenceTile({
       onClick={() => !disabled && onToggle()}
       disabled={disabled}
       className={
-        "group relative rounded-lg overflow-hidden border-2 aspect-square transition focus-gold " +
+        "group relative rounded-sm overflow-hidden aspect-square transition-all duration-300 focus-gold " +
         (isSelected
-          ? "border-champagne-300 shadow-glow"
+          ? "border-2 border-gold-500 shadow-glow"
           : disabled
-            ? "border-transparent opacity-30 cursor-not-allowed"
-            : "border-white/5 hover:border-champagne-300/50")
+            ? "border-2 border-transparent opacity-30 cursor-not-allowed"
+            : "border border-bone-300 hover:border-gold-500 hover:shadow-[0_0_18px_rgba(199,199,203,0.45)]")
       }
       title={filename}
     >
@@ -152,19 +154,19 @@ function ReferenceTile({
       <img
         src={imageUrl(url)}
         alt={filename}
-        className="w-full h-full object-cover bg-onyx-800"
+        className="w-full h-full object-cover bg-ivory-50"
       />
       {isSelected && (
-        <span className="absolute top-1.5 right-1.5 bg-gold-gradient text-onyx-900 text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-semibold shadow-glow">
+        <span className="absolute top-1.5 right-1.5 bg-gold-500 text-ink-900 text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-semibold shadow-glow">
           ✓
         </span>
       )}
       {distance !== undefined && (
-        <span className="absolute top-1.5 left-1.5 bg-onyx-950/80 text-champagne-300 text-[9px] px-1.5 py-0.5 rounded font-mono">
+        <span className="absolute top-1.5 left-1.5 bg-ivory-50/90 text-gold-700 text-[9px] px-1.5 py-0.5 rounded-sm font-mono border border-gold-400/30">
           {distance.toFixed(3)}
         </span>
       )}
-      <span className="absolute inset-x-0 bottom-0 px-1.5 py-0.5 text-[9px] text-ivory bg-onyx-950/70 truncate opacity-0 group-hover:opacity-100 transition">
+      <span className="absolute inset-x-0 bottom-0 px-1.5 py-0.5 text-[9px] text-ivory-50 bg-ink-900/80 truncate opacity-0 group-hover:opacity-100 transition-opacity duration-300">
         {filename}
       </span>
     </button>
@@ -178,18 +180,18 @@ function StageDot({
     <div className="flex items-center gap-2 shrink-0">
       <span
         className={
-          "w-2 h-2 rounded-full transition " +
+          "w-2 h-2 rounded-full transition-all duration-300 " +
           (active
-            ? "bg-gold-gradient shadow-glow"
+            ? "bg-gold-500 shadow-glow"
             : done
-              ? "bg-champagne-300/60"
-              : "bg-onyx-600")
+              ? "bg-gold-400"
+              : "bg-bone-300")
         }
       />
       <span
         className={
-          "text-[10px] uppercase tracking-[0.2em] transition " +
-          (active ? "text-champagne-300" : done ? "text-onyx-300" : "text-onyx-400")
+          "text-[10px] uppercase tracking-[0.22em] transition-colors duration-300 font-medium " +
+          (active ? "text-gold-700" : done ? "text-ink-500" : "text-ink-400")
         }
       >
         {label}
@@ -202,14 +204,12 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
   const [stage, setStage] = useState<Stage>("intent");
   const [prompt, setPrompt] = useState("");
 
-  // Refinements — always-visible tier
   const [pieceType, setPieceType] = useState("");
   const [styleField, setStyleField] = useState("");
   const [metal, setMetal] = useState("");
   const [occasion, setOccasion] = useState("");
   const [stoneType, setStoneType] = useState("Diamond");
 
-  // Refinements — more-options tier
   const [showMore, setShowMore] = useState(false);
   const [stoneCut, setStoneCut] = useState("");
   const [stoneSize, setStoneSize] = useState("");
@@ -219,13 +219,11 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
   const [influence, setInfluence] = useState(70);
   const [aspect, setAspect] = useState("");
 
-  // Stage-2 state
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [retrievalQuery, setRetrievalQuery] = useState("");
   const [showFullLibrary, setShowFullLibrary] = useState(false);
   const [selectedRefs, setSelectedRefs] = useState<Set<string>>(new Set());
 
-  // Stage-3 state (linear thread, latest first)
   const [generations, setGenerations] = useState<GenerationRecord[]>([]);
   const [modifyText, setModifyText] = useState("");
 
@@ -379,9 +377,16 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
   const candidateIds = new Set(candidates.map((c) => c.id));
   const libraryExtras = images.filter((img) => !candidateIds.has(img.id));
 
+  const primaryBtn =
+    "bg-gold-500 hover:bg-gold-600 text-ink-900 text-[11px] uppercase tracking-[0.18em] font-medium rounded-sm px-8 h-11 shadow-glow disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 focus-gold inline-flex items-center justify-center gap-2";
+  const secondaryBtn =
+    "border border-ink-800 bg-transparent text-ink-800 hover:bg-ink-800 hover:text-ivory-50 text-[11px] uppercase tracking-[0.18em] font-medium rounded-sm px-6 h-11 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 focus-gold inline-flex items-center justify-center gap-2";
+  const tertiaryLink =
+    "text-[11px] uppercase tracking-[0.22em] text-ink-700 hover:text-gold-700 transition-colors duration-300 focus-gold rounded-sm inline-flex items-center gap-1";
+
   return (
     <div className="h-full overflow-y-auto pr-1">
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 pb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 pb-6">
         {/* ─── LEFT: stage-driven controls ─── */}
         <div className="lg:col-span-3 flex flex-col gap-5">
           {/* Stage indicator */}
@@ -395,7 +400,7 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
               <button
                 type="button"
                 onClick={onStartOver}
-                className="ml-auto text-[10px] uppercase tracking-[0.2em] text-onyx-300 hover:text-champagne-300 transition focus-gold rounded"
+                className="ml-auto text-[10px] uppercase tracking-[0.2em] text-ink-500 hover:text-gold-700 transition-colors duration-300 focus-gold rounded-sm"
               >
                 ↺ Start over
               </button>
@@ -403,40 +408,40 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
           </div>
 
           {/* Vision + Refinements card */}
-          <div className="glass rounded-2xl shadow-card p-6 flex flex-col gap-5">
+          <div className="bg-ivory-50 border border-bone-300 shadow-card p-7">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.3em] text-champagne-300/80 mb-2">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-ink-500 mb-3 font-medium">
                 Step 1 · Vision
               </p>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="A pendant in the spirit of these references — a teardrop center stone framed by pavé diamonds, set in warm 22k gold."
-                className="w-full bg-onyx-800/70 border border-white/5 rounded-xl px-4 py-3 text-sm text-ivory placeholder:text-onyx-300 min-h-[90px] resize-none focus-gold transition disabled:opacity-50"
+                className="w-full bg-ivory-50 border border-bone-300 rounded-sm px-4 py-3 text-sm text-ink-900 placeholder:text-ink-400 placeholder:italic min-h-[100px] resize-none focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-300/40 transition-colors duration-300 disabled:opacity-50"
                 disabled={busy || stage === "iterate"}
               />
               {stage === "iterate" && (
-                <p className="text-[10px] text-onyx-300 mt-1 italic">
-                  Locked while iterating. Hit ↺ Start over to design something new.
+                <p className="text-[10px] text-ink-500 mt-2 caption-italic">
+                  Locked while iterating. Press ↺ Start over to design something new.
                 </p>
               )}
             </div>
 
             {stage !== "iterate" && (
               <>
-                <div className="hairline" />
+                <div className="hairline my-6" />
 
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-[11px] uppercase tracking-[0.3em] text-champagne-300/80">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-ink-500 font-medium">
                       Step 2 · Refinements
                     </p>
-                    <span className="text-[10px] text-onyx-300">
+                    <span className="text-[10px] text-ink-500 caption-italic">
                       pick what you want · skip what you don&rsquo;t
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                     <Select label="Piece" value={pieceType} onChange={setPieceType} options={PIECE_TYPES} required />
                     <Select label="Style" value={styleField} onChange={setStyleField} options={STYLES} />
                     <Select label="Metal" value={metal} onChange={setMetal} options={METALS} />
@@ -447,14 +452,14 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
                   <button
                     type="button"
                     onClick={() => setShowMore((v) => !v)}
-                    className="mt-4 text-[11px] uppercase tracking-[0.25em] text-champagne-300 hover:text-champagne-200 transition focus-gold rounded"
+                    className={tertiaryLink + " mt-5"}
                   >
                     {showMore ? "− Fewer options" : "+ More options"}
                   </button>
 
                   {showMore && (
-                    <div className="mt-4 flex flex-col gap-5 animate-fade-up">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+                    <div className="mt-5 flex flex-col gap-6 animate-fade-up">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                         <Select label="Stone cut" value={stoneCut} onChange={setStoneCut} options={STONE_CUTS} disabled={stoneDisabled} />
                         <Select label="Stone size" value={stoneSize} onChange={setStoneSize} options={STONE_SIZES} disabled={stoneDisabled} />
                         <Select label="Setting" value={setting} onChange={setSetting} options={SETTINGS} />
@@ -469,12 +474,12 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
                         onToggle={togglePalette}
                       />
 
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-2.5">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] uppercase tracking-[0.2em] text-onyx-300">
+                          <span className="text-[10px] uppercase tracking-[0.22em] text-ink-500 font-medium">
                             Reference influence
                           </span>
-                          <span className="text-[10px] text-champagne-300">
+                          <span className="text-[10px] text-gold-700 font-medium">
                             {influenceLabel} · {influence}%
                           </span>
                         </div>
@@ -484,7 +489,7 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
                           max={100}
                           value={influence}
                           onChange={(e) => setInfluence(Number(e.target.value))}
-                          className="w-full accent-champagne-300"
+                          className="w-full accent-gold-500"
                           disabled={selectedRefs.size === 0 && stage === "intent"}
                         />
                       </div>
@@ -497,54 +502,52 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
 
           {/* Stage 1 CTA */}
           {stage === "intent" && (
-            <form onSubmit={onFindReferences} className="flex flex-col gap-3">
-              <div className="flex items-center gap-4">
-                <button
-                  type="submit"
-                  disabled={busy || !prompt.trim() || !pieceType}
-                  className="bg-gold-gradient text-onyx-900 text-xs uppercase tracking-[0.25em] rounded-full px-6 py-2.5 font-medium shadow-glow disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition focus-gold"
-                >
-                  {busy ? "Searching…" : "Find references →"}
-                </button>
-                {!pieceType && (
-                  <span className="text-[11px] text-onyx-300">
-                    Pick a piece type to start.
-                  </span>
-                )}
-                {error && (
-                  <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-1.5">
-                    {error}
-                  </p>
-                )}
-              </div>
+            <form onSubmit={onFindReferences} className="flex items-center gap-4">
+              <button
+                type="submit"
+                disabled={busy || !prompt.trim() || !pieceType}
+                className={primaryBtn}
+              >
+                {busy ? "Searching…" : "Find references →"}
+              </button>
+              {!pieceType && (
+                <span className="text-[11px] text-ink-500 caption-italic">
+                  Pick a piece type to start.
+                </span>
+              )}
+              {error && (
+                <p className="text-xs text-red-800 bg-red-50 border border-red-200 rounded-sm px-3 py-1.5">
+                  {error}
+                </p>
+              )}
             </form>
           )}
 
           {/* Stage 2: candidates + library fallback + Generate */}
           {stage === "curate" && (
-            <div className="glass rounded-2xl shadow-card p-6 flex flex-col gap-5">
+            <div className="bg-ivory-50 border border-bone-300 shadow-card p-7 flex flex-col gap-5">
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-[11px] uppercase tracking-[0.3em] text-champagne-300/80">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-ink-500 font-medium">
                     Step 3 · References
                   </p>
-                  <span className="text-[11px] text-onyx-300">
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-gold-300/15 text-gold-700 border border-gold-300/30">
                     {selectedRefs.size}/{MAX_REFS} selected
                   </span>
                 </div>
-                <p className="text-[10px] text-onyx-300 italic mb-3">
+                <p className="caption-italic text-xs mb-4">
                   Retrieved {candidates.length} for &ldquo;{retrievalQuery}&rdquo;.
                   Lower distance = better match.
                 </p>
 
                 {candidates.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-white/10 px-4 py-6 text-center">
-                    <p className="text-xs text-onyx-300">
+                  <div className="border border-dashed border-bone-300 px-4 py-7 text-center rounded-sm bg-ivory-100/50">
+                    <p className="text-xs text-ink-500">
                       No matches — try a different vision, or use &ldquo;Show full library&rdquo; below.
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2.5">
+                  <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
                     {candidates.map((c) => {
                       const isSel = selectedRefs.has(c.id);
                       const disabled = !isSel && selectedRefs.size >= MAX_REFS;
@@ -568,16 +571,16 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
                 <button
                   type="button"
                   onClick={() => setShowFullLibrary((v) => !v)}
-                  className="text-[11px] uppercase tracking-[0.25em] text-champagne-300 hover:text-champagne-200 transition focus-gold rounded"
+                  className={tertiaryLink}
                 >
                   {showFullLibrary ? "− Hide library" : "+ Show full library"}
-                  <span className="text-onyx-300 normal-case tracking-normal ml-2">
+                  <span className="text-ink-500 normal-case tracking-normal ml-1.5 font-normal">
                     ({libraryExtras.length} more)
                   </span>
                 </button>
 
                 {showFullLibrary && libraryExtras.length > 0 && (
-                  <div className="mt-3 grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2.5 animate-fade-up">
+                  <div className="mt-3 grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3 animate-fade-up">
                     {libraryExtras.map((img) => {
                       const isSel = selectedRefs.has(img.id);
                       const disabled = !isSel && selectedRefs.size >= MAX_REFS;
@@ -599,22 +602,22 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
               <div className="hairline" />
 
               {assembledPrompt.trim().length > 0 && (
-                <div className="rounded-lg bg-onyx-800/40 border border-white/5 px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-onyx-300 mb-1">
+                <div className="rounded-sm bg-bone-100/50 border border-bone-200 px-4 py-3">
+                  <p className="text-[9px] uppercase tracking-[0.25em] text-ink-500 mb-1.5 font-medium">
                     Prompt sent to Gemini
                   </p>
-                  <p className="text-[11px] text-ivory/80 italic leading-relaxed break-words">
+                  <p className="caption-italic text-[12px] leading-relaxed break-words">
                     {assembledPrompt}
                   </p>
                 </div>
               )}
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   type="button"
                   onClick={onGenerate}
                   disabled={busy || !prompt.trim() || !pieceType}
-                  className="bg-gold-gradient text-onyx-900 text-xs uppercase tracking-[0.25em] rounded-full px-6 py-2.5 font-medium shadow-glow disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition focus-gold"
+                  className={primaryBtn}
                 >
                   {busy ? "Composing…" : "Generate →"}
                 </button>
@@ -622,12 +625,12 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
                   type="button"
                   onClick={() => setStage("intent")}
                   disabled={busy}
-                  className="text-[11px] uppercase tracking-[0.25em] text-onyx-300 hover:text-champagne-300 transition focus-gold rounded disabled:opacity-40"
+                  className={tertiaryLink}
                 >
                   ← Back
                 </button>
                 {error && (
-                  <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-1.5">
+                  <p className="text-xs text-red-800 bg-red-50 border border-red-200 rounded-sm px-3 py-1.5">
                     {error}
                   </p>
                 )}
@@ -637,34 +640,34 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
 
           {/* Stage 3: modify */}
           {stage === "iterate" && (
-            <div className="glass rounded-2xl shadow-card p-6 flex flex-col gap-4">
+            <div className="bg-ivory-50 border border-bone-300 shadow-card p-7 flex flex-col gap-5">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.3em] text-champagne-300/80 mb-2">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-ink-500 mb-3 font-medium">
                   Step 4 · Modify
                 </p>
-                <p className="text-[10px] text-onyx-300 italic mb-2">
+                <p className="caption-italic text-xs mb-3">
                   Edits apply to the most-recent generation. Each modification is a new variation.
                 </p>
                 <textarea
                   value={modifyText}
                   onChange={(e) => setModifyText(e.target.value)}
                   placeholder="Make the center stone slightly larger; swap pavé for milgrain."
-                  className="w-full bg-onyx-800/70 border border-white/5 rounded-xl px-4 py-3 text-sm text-ivory placeholder:text-onyx-300 min-h-[80px] resize-none focus-gold transition"
+                  className="w-full bg-ivory-50 border border-bone-300 rounded-sm px-4 py-3 text-sm text-ink-900 placeholder:text-ink-400 placeholder:italic min-h-[90px] resize-none focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-300/40 transition-colors duration-300"
                   disabled={busy}
                 />
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 flex-wrap">
                 <button
                   type="button"
                   onClick={onModify}
                   disabled={busy || !modifyText.trim()}
-                  className="bg-gold-gradient text-onyx-900 text-xs uppercase tracking-[0.25em] rounded-full px-6 py-2.5 font-medium shadow-glow disabled:opacity-40 disabled:cursor-not-allowed hover:brightness-110 transition focus-gold"
+                  className={primaryBtn}
                 >
                   {busy ? "Editing…" : "Modify"}
                 </button>
                 {error && (
-                  <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded px-3 py-1.5">
+                  <p className="text-xs text-red-800 bg-red-50 border border-red-200 rounded-sm px-3 py-1.5">
                     {error}
                   </p>
                 )}
@@ -674,29 +677,30 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
         </div>
 
         {/* ─── RIGHT: result + history ─── */}
-        <aside className="lg:col-span-2 glass rounded-2xl shadow-card p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] uppercase tracking-[0.3em] text-champagne-300/80">
+        <aside className="lg:col-span-2 bg-ivory-50 border border-bone-300 shadow-card p-7 flex flex-col">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-ink-500 font-medium">
               {stage === "iterate" ? "Latest" : "Result"}
             </p>
             {currentGen && (
               <a
                 href={imageUrl(currentGen.url)}
                 download={`design-${currentGen.id}${currentGen.mimeType === "image/png" ? ".png" : ".jpg"}`}
-                className="text-[11px] uppercase tracking-[0.2em] text-champagne-300 hover:text-champagne-200 transition"
+                className="text-[10px] uppercase tracking-[0.22em] text-ink-700 hover:text-gold-700 transition-colors duration-300 relative group"
               >
                 Download ↓
+                <span className="absolute left-0 right-0 bottom-[-2px] h-px bg-gold-600 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300" />
               </a>
             )}
           </div>
 
-          <div className="hairline mb-4" />
+          <div className="hairline mb-5" />
 
           {busy && stage !== "intent" ? (
-            <div className="aspect-square w-full rounded-xl shimmer border border-white/5" />
+            <div className="aspect-square w-full rounded-sm shimmer border border-bone-300" />
           ) : currentGen ? (
-            <div className="flex flex-col gap-3 animate-fade-up">
-              <div className="rounded-xl overflow-hidden border border-champagne-300/20 shadow-glow">
+            <div className="flex flex-col gap-4 animate-fade-up">
+              <div className="rounded-sm overflow-hidden border-[1.5px] border-gold-500">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={imageUrl(currentGen.url)}
@@ -704,16 +708,16 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
                   className="w-full h-auto"
                 />
               </div>
-              <p className="text-xs text-onyx-300 italic leading-relaxed break-words">
+              <p className="caption-italic text-sm leading-relaxed break-words px-1">
                 &ldquo;{currentGen.prompt}&rdquo;
               </p>
 
               {generations.length > 1 && (
                 <div className="mt-2">
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-onyx-300 mb-2">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-ink-500 mb-2 font-medium">
                     History · {generations.length - 1} earlier
                   </p>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
+                  <div className="flex gap-2.5 overflow-x-auto pb-1">
                     {generations.slice(1).map((g) => (
                       <a
                         key={g.id}
@@ -721,7 +725,7 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
                         target="_blank"
                         rel="noreferrer"
                         title={g.prompt}
-                        className="block shrink-0 w-16 h-16 rounded-md overflow-hidden border border-white/10 hover:border-champagne-300/50 transition"
+                        className="block shrink-0 w-16 h-16 rounded-sm overflow-hidden border border-bone-300 hover:border-gold-500 transition-colors duration-300"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -736,11 +740,11 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
               )}
             </div>
           ) : (
-            <div className="flex-1 min-h-[260px] rounded-xl border border-dashed border-white/10 flex items-center justify-center text-center px-6">
-              <p className="text-xs text-onyx-300 leading-relaxed">
+            <div className="flex-1 min-h-[280px] rounded-sm border border-dashed border-bone-300 bg-ivory-100/40 flex items-center justify-center text-center px-8">
+              <p className="caption-italic text-sm text-ink-500 leading-relaxed">
                 {stage === "intent"
                   ? "Write a vision, then we'll surface relevant references from your library."
-                  : "Pick your references and hit Generate."}
+                  : "Pick your references and press Generate."}
               </p>
             </div>
           )}
