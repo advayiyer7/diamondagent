@@ -112,3 +112,45 @@ export async function listGenerations(): Promise<GenerationRecord[]> {
   const json = (await res.json()) as { generations: GenerationRecord[] };
   return json.generations;
 }
+
+// ─── 3D draft (Meshy image-to-3D) ─────────────────────────────────────────
+
+export type ModelStatus = "pending" | "processing" | "completed" | "failed";
+
+export type ModelRecord = {
+  id: string;
+  generationId: string;
+  status: ModelStatus;
+  progress?: number;
+  errorMessage?: string;
+  fileUrl?: string; // /api/models/:id/file when completed
+  createdAt?: number;
+  completedAt?: number;
+};
+
+export async function createModel(generationId: string): Promise<ModelRecord> {
+  const res = await fetch(`${API_BASE}/api/models`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ generationId }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`createModel failed (${res.status}): ${err}`);
+  }
+  return (await res.json()) as ModelRecord;
+}
+
+export async function getModel(id: string): Promise<ModelRecord> {
+  const res = await fetch(`${API_BASE}/api/models/${id}`, { cache: "no-store" });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`getModel failed (${res.status}): ${err}`);
+  }
+  return (await res.json()) as ModelRecord;
+}
+
+// Resolves the relative /api/models/:id/file URL to an absolute backend URL.
+export function modelFileUrl(rel: string): string {
+  return rel.startsWith("http") ? rel : `${API_BASE}${rel}`;
+}

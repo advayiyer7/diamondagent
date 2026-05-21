@@ -7,16 +7,33 @@ import {
   handleListGenerations,
   handleGetGeneration,
 } from "./routes/generate";
+import {
+  handleCreateModel,
+  handleGetModel,
+  handleGetModelFile,
+} from "./routes/models";
 import { corsHeaders, jsonResponse, errorResponse, preflight } from "./http";
 import { initSchema } from "./db";
+import { assertMeshyConfigured } from "./meshy";
 
 const PORT = Number(process.env.PORT || 3001);
+
+// Fail fast — refuse to start if required external services aren't configured.
+try {
+  assertMeshyConfigured();
+  console.log("[startup] MESHY_API_KEY configured");
+} catch (err) {
+  console.error("[startup]", (err as Error).message);
+  process.exit(1);
+}
 
 await initSchema();
 
 const UUID = "[A-Za-z0-9-]+";
 const imageByIdRe = new RegExp(`^/api/images/(${UUID})$`);
 const generatedByIdRe = new RegExp(`^/api/generated/(${UUID})$`);
+const modelByIdRe = new RegExp(`^/api/models/(${UUID})$`);
+const modelFileRe = new RegExp(`^/api/models/(${UUID})/file$`);
 
 async function attachCors(res: Response): Promise<Response> {
   const headers = new Headers(res.headers);
@@ -70,6 +87,22 @@ const server = Bun.serve({
       const genMatch = pathname.match(generatedByIdRe);
       if (genMatch && method === "GET") {
         return await attachCors(await handleGetGeneration(genMatch[1]!));
+      }
+
+      if (pathname === "/api/models" && method === "POST") {
+        return await handleCreateModel(req);
+      }
+
+      const modelFileMatch = pathname.match(modelFileRe);
+      if (modelFileMatch && method === "GET") {
+        // handleGetModelFile already returns CORS headers on the success
+        // path, so no need to wrap.
+        return await handleGetModelFile(modelFileMatch[1]!);
+      }
+
+      const modelMatch = pathname.match(modelByIdRe);
+      if (modelMatch && method === "GET") {
+        return await handleGetModel(modelMatch[1]!);
       }
 
       return errorResponse(404, `No route for ${method} ${pathname}`);

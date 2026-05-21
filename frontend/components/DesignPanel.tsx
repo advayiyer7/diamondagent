@@ -9,6 +9,7 @@ import {
   type ImageRecord,
   type Candidate,
 } from "../lib/api";
+import { Generate3DButton } from "./Generate3DButton";
 
 const MAX_REFS = 6;
 const TOP_K = 8;
@@ -711,6 +712,15 @@ export function DesignPanel({ images }: { images: ImageRecord[] }) {
               <p className="caption-italic text-sm leading-relaxed break-words px-1">
                 &ldquo;{currentGen.prompt}&rdquo;
               </p>
+
+              <div className="hairline" />
+
+              {/* Secondary affordance — convert the 2D render into a 3D draft.
+                  Keyed by generation id so each new variation gets a fresh viewer. */}
+              <Generate3DButton
+                key={currentGen.id}
+                generationId={currentGen.id}
+              />
 
               {generations.length > 1 && (
                 <div className="mt-2">

@@ -6,6 +6,7 @@ build/
 .env
 .env.local
 *.log
+*.tsbuildinfo
 backend/uploads/
 backend/data.db
 backend/data.db-journal

@@ -1,7 +1,12 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { sql } from "drizzle-orm";
+import { sql, eq, desc } from "drizzle-orm";
 import * as schema from "./schema";
+import {
+  models,
+  type ModelRow,
+  type ModelStatus,
+} from "./schema";
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -67,5 +72,78 @@ export async function initSchema(): Promise<void> {
     )
   `);
 
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS models (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      generation_id UUID NOT NULL REFERENCES generations(id) ON DELETE CASCADE,
+      meshy_task_id TEXT NOT NULL,
+      path TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      progress INTEGER NOT NULL DEFAULT 0,
+      error_message TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      completed_at TIMESTAMPTZ
+    )
+  `);
+
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS models_generation_idx
+    ON models(generation_id, created_at DESC)
+  `);
+
   console.log("[db] schema ready");
+}
+
+// ─── models helpers ─────────────────────────────────────────────────────────
+
+export async function insertModel(args: {
+  generationId: string;
+  meshyTaskId: string;
+}): Promise<ModelRow> {
+  const [row] = await db
+    .insert(models)
+    .values({
+      generationId: args.generationId,
+      meshyTaskId: args.meshyTaskId,
+      status: "pending",
+      progress: 0,
+    })
+    .returning();
+  if (!row) throw new Error("insertModel: nothing returned");
+  return row;
+}
+
+export async function updateModelStatus(
+  id: string,
+  patch: {
+    status?: ModelStatus;
+    progress?: number;
+    path?: string;
+    errorMessage?: string;
+    completedAt?: Date;
+  },
+): Promise<void> {
+  const set: Record<string, unknown> = {};
+  if (patch.status !== undefined) set.status = patch.status;
+  if (patch.progress !== undefined) set.progress = patch.progress;
+  if (patch.path !== undefined) set.path = patch.path;
+  if (patch.errorMessage !== undefined) set.errorMessage = patch.errorMessage;
+  if (patch.completedAt !== undefined) set.completedAt = patch.completedAt;
+  if (Object.keys(set).length === 0) return;
+  await db.update(models).set(set).where(eq(models.id, id));
+}
+
+export async function getModel(id: string): Promise<ModelRow | null> {
+  const [row] = await db.select().from(models).where(eq(models.id, id));
+  return row ?? null;
+}
+
+export async function listModelsForGeneration(
+  generationId: string,
+): Promise<ModelRow[]> {
+  return db
+    .select()
+    .from(models)
+    .where(eq(models.generationId, generationId))
+    .orderBy(desc(models.createdAt));
 }

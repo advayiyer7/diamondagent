@@ -5,6 +5,7 @@ import {
   jsonb,
   uuid,
   vector,
+  integer,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -77,6 +78,27 @@ export const generations = pgTable("generations", {
     .notNull(),
 });
 
+// 3D drafts produced by Meshy from a 2D generation. One generation can have
+// many models (re-runs / retries). `path` is null while the Meshy task is
+// still pending/processing; populated once the .glb is downloaded to disk.
+export type ModelStatus = "pending" | "processing" | "completed" | "failed";
+
+export const models = pgTable("models", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  generationId: uuid("generation_id")
+    .notNull()
+    .references(() => generations.id, { onDelete: "cascade" }),
+  meshyTaskId: text("meshy_task_id").notNull(),
+  path: text("path"),
+  status: text("status").$type<ModelStatus>().notNull().default("pending"),
+  progress: integer("progress").notNull().default(0),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
 export const sessionsRelations = relations(sessions, ({ many }) => ({
   messages: many(messages),
 }));
@@ -92,3 +114,4 @@ export type ImageRow = typeof images.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type MessageRow = typeof messages.$inferSelect;
 export type GenerationRow = typeof generations.$inferSelect;
+export type ModelRow = typeof models.$inferSelect;
