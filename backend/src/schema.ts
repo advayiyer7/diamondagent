@@ -34,6 +34,8 @@ export const sessions = pgTable("sessions", {
 // What we store per assistant turn so the UI can re-render the reasoning + any
 // images the agent surfaced. Kept as JSONB so we don't proliferate columns.
 export type MessageMeta = {
+  intent?: "search" | "design" | "design-draft" | "model3d" | "discuss";
+  rationale?: string;
   toolCalls?: Array<{
     name: string;
     args: Record<string, unknown>;
@@ -45,6 +47,25 @@ export type MessageMeta = {
     url: string;
     mimeType: string;
     prompt: string;
+  };
+  // For 'design-draft' turns: an in-conversation control panel. The user
+  // tweaks the prompt, picks references, and hits Generate — which creates
+  // a brand new 'design' assistant message (with meta.generatedImage).
+  designDraft?: {
+    prompt: string;
+    candidates: Array<{
+      id: string;
+      filename: string;
+      url: string;
+      distance: number;
+    }>;
+  };
+  // For 'model3d' turns triggered via chat: which model row to poll. The
+  // 3D button on a design message uses its own local polling and does NOT
+  // write this field.
+  modelDraft?: {
+    modelId: string;
+    sourceGenerationId: string;
   };
 };
 

@@ -4,8 +4,10 @@ import { sql, eq, desc } from "drizzle-orm";
 import * as schema from "./schema";
 import {
   models,
+  generations,
   type ModelRow,
   type ModelStatus,
+  type GenerationRow,
 } from "./schema";
 
 const connectionString =
@@ -91,7 +93,52 @@ export async function initSchema(): Promise<void> {
     ON models(generation_id, created_at DESC)
   `);
 
+  // generations.session_id was originally ON DELETE SET NULL — flip it to
+  // CASCADE so deleting a session also removes its design history (and via
+  // models.generation_id CASCADE, the 3D drafts too). Idempotent: drop the
+  // existing constraint by its drizzle-generated name and re-add with the
+  // new rule.
+  await db.execute(sql`
+    ALTER TABLE generations
+      DROP CONSTRAINT IF EXISTS generations_session_id_sessions_id_fk
+  `);
+  await db.execute(sql`
+    ALTER TABLE generations
+      ADD CONSTRAINT generations_session_id_sessions_id_fk
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+  `);
+
   console.log("[db] schema ready");
+}
+
+// ─── sessions helpers ───────────────────────────────────────────────────────
+
+export async function countSessions(): Promise<number> {
+  const [row] = await db.execute<{ count: number }>(
+    sql`SELECT count(*)::int AS count FROM sessions`,
+  );
+  return Number(row?.count ?? 0);
+}
+
+// ─── generations helpers ────────────────────────────────────────────────────
+
+export async function getLatestGenerationForSession(
+  sessionId: string,
+): Promise<GenerationRow | null> {
+  const [row] = await db
+    .select()
+    .from(generations)
+    .where(eq(generations.sessionId, sessionId))
+    .orderBy(desc(generations.createdAt))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getGenerationById(
+  id: string,
+): Promise<GenerationRow | null> {
+  const [row] = await db.select().from(generations).where(eq(generations.id, id));
+  return row ?? null;
 }
 
 // ─── models helpers ─────────────────────────────────────────────────────────

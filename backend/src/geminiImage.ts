@@ -80,7 +80,37 @@ function extractImage(part: ResponsePart): { data: string; mime: string } | null
   return null;
 }
 
+// gemini-2.5-flash-image occasionally returns text only (finishReason=NO_IMAGE)
+// even with responseModalities=["IMAGE"]. It's flaky on short modify prompts.
+// Retry a couple of times before giving up — the next attempt usually succeeds.
+const MAX_NO_IMAGE_RETRIES = 2;
+const RETRY_BACKOFF_MS = 600;
+
 export async function generateImage(
+  prompt: string,
+  references: ReferenceImage[],
+): Promise<GeneratedImage> {
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt <= MAX_NO_IMAGE_RETRIES; attempt++) {
+    try {
+      return await generateImageOnce(prompt, references);
+    } catch (err) {
+      lastErr = err as Error;
+      // Only retry on NO_IMAGE — 4xx, auth failures, and safety blocks are
+      // sticky and shouldn't be retried.
+      if (!/NO_IMAGE/.test(lastErr.message)) throw lastErr;
+      if (attempt < MAX_NO_IMAGE_RETRIES) {
+        console.warn(
+          `[geminiImage] NO_IMAGE on attempt ${attempt + 1}/${MAX_NO_IMAGE_RETRIES + 1}; retrying…`,
+        );
+        await new Promise((r) => setTimeout(r, RETRY_BACKOFF_MS));
+      }
+    }
+  }
+  throw lastErr ?? new Error("generateImage failed without a recorded error");
+}
+
+async function generateImageOnce(
   prompt: string,
   references: ReferenceImage[],
 ): Promise<GeneratedImage> {

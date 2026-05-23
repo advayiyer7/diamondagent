@@ -1,9 +1,12 @@
 import { desc, eq } from "drizzle-orm";
 
-import { db } from "../db";
+import { db, countSessions } from "../db";
 import { sessions, messages, type MessageMeta } from "../schema";
-import { runAgent } from "../agent";
+import { runAgent, generateFromDraft } from "../agent";
 import { jsonResponse, errorResponse } from "../http";
+
+const SESSION_CAP = 5;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function serializeSession(row: typeof sessions.$inferSelect) {
   return {
@@ -34,6 +37,18 @@ export async function handleListSessions(): Promise<Response> {
 }
 
 export async function handleCreateSession(req: Request): Promise<Response> {
+  const existing = await countSessions();
+  if (existing >= SESSION_CAP) {
+    return jsonResponse(
+      {
+        error: "SESSION_CAP",
+        message: `Max ${SESSION_CAP} sessions. Delete one to start a new chat.`,
+        limit: SESSION_CAP,
+      },
+      409,
+    );
+  }
+
   let body: { title?: unknown } = {};
   try {
     body = (await req.json()) as { title?: unknown };
@@ -100,15 +115,22 @@ export async function handlePostMessage(
   id: string,
   req: Request,
 ): Promise<Response> {
-  let body: { message?: unknown };
+  let body: { message?: unknown; modifyBaseId?: unknown };
   try {
-    body = (await req.json()) as { message?: unknown };
+    body = (await req.json()) as { message?: unknown; modifyBaseId?: unknown };
   } catch {
     return errorResponse(400, "Body must be JSON");
   }
   const message = body.message;
   if (typeof message !== "string" || message.trim().length === 0) {
     return errorResponse(400, "Field 'message' must be a non-empty string");
+  }
+  let modifyBaseId: string | undefined;
+  if (body.modifyBaseId !== undefined && body.modifyBaseId !== null) {
+    if (typeof body.modifyBaseId !== "string" || !UUID_RE.test(body.modifyBaseId)) {
+      return errorResponse(400, "Field 'modifyBaseId' must be a UUID");
+    }
+    modifyBaseId = body.modifyBaseId;
   }
 
   const [s] = await db.select().from(sessions).where(eq(sessions.id, id));
@@ -121,6 +143,7 @@ export async function handlePostMessage(
       sessionId: id,
       role: "user",
       content: message.trim(),
+      meta: modifyBaseId ? ({ toolCalls: [{ name: "modifyBase", args: { modifyBaseId }, summary: "" }] } as MessageMeta) : null,
     })
     .returning();
 
@@ -128,7 +151,7 @@ export async function handlePostMessage(
 
   let agent;
   try {
-    agent = await runAgent(id, message.trim());
+    agent = await runAgent(id, message.trim(), { modifyBaseId });
   } catch (err) {
     console.error("[sessions] agent failed:", err);
     return errorResponse(500, `Agent failed: ${(err as Error).message}`);
@@ -154,4 +177,68 @@ export async function handlePostMessage(
     userMessage: serializeMessage(userRow),
     assistantMessage: assistantRow ? serializeMessage(assistantRow) : null,
   });
+}
+
+/**
+ * POST /api/sessions/:id/generate — second stage of the design flow. Called
+ * by the in-chat DraftPanel after the user picks references + tweaks the
+ * prompt. Generates the image, persists it, and appends a brand-new
+ * assistant message ('design' intent) to the session.
+ */
+export async function handleGenerateFromDraft(
+  id: string,
+  req: Request,
+): Promise<Response> {
+  let body: { prompt?: unknown; referenceIds?: unknown };
+  try {
+    body = (await req.json()) as typeof body;
+  } catch {
+    return errorResponse(400, "Body must be JSON");
+  }
+  const prompt = body.prompt;
+  if (typeof prompt !== "string" || prompt.trim().length === 0) {
+    return errorResponse(400, "Field 'prompt' must be a non-empty string");
+  }
+  const rawRefs = body.referenceIds;
+  if (rawRefs !== undefined && !Array.isArray(rawRefs)) {
+    return errorResponse(400, "Field 'referenceIds' must be an array of strings");
+  }
+  const referenceIds: string[] = Array.isArray(rawRefs)
+    ? rawRefs.filter((r): r is string => typeof r === "string")
+    : [];
+  for (const refId of referenceIds) {
+    if (!UUID_RE.test(refId)) {
+      return errorResponse(400, `Reference id must be a UUID: ${refId}`);
+    }
+  }
+
+  const [s] = await db.select().from(sessions).where(eq(sessions.id, id));
+  if (!s) return errorResponse(404, "Session not found");
+
+  let generated;
+  try {
+    generated = await generateFromDraft(id, prompt.trim(), referenceIds);
+  } catch (err) {
+    console.error("[sessions] generate-from-draft failed:", err);
+    return errorResponse(500, `Generation failed: ${(err as Error).message}`);
+  }
+
+  const [assistantRow] = await db
+    .insert(messages)
+    .values({
+      sessionId: id,
+      role: "assistant",
+      content: generated.content,
+      meta: generated.meta,
+    })
+    .returning();
+
+  // Float the session in the rail.
+  await db
+    .update(sessions)
+    .set({ updatedAt: new Date() })
+    .where(eq(sessions.id, id));
+
+  if (!assistantRow) return errorResponse(500, "Failed to persist generated message");
+  return jsonResponse({ assistantMessage: serializeMessage(assistantRow) });
 }
