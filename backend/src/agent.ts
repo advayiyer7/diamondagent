@@ -1,7 +1,7 @@
 import { generateObject, generateText, type CoreMessage } from "ai";
 import { createVertex } from "@ai-sdk/google-vertex";
 import { z } from "zod";
-import { readFileSync, existsSync, writeFileSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { sql, eq, desc, and } from "drizzle-orm";
 
@@ -31,6 +31,10 @@ const DESIGN_AUTO_REFS = 4;
 const DRAFT_CANDIDATES = 8;
 
 const GEN_DIR = resolve(import.meta.dir, "..", "uploads", "generated");
+// The mounted volume starts empty on a fresh deploy, so ensure the generated/
+// subdir exists before we write into it (upload.ts + meshyPoller do the same
+// for their own dirs).
+if (!existsSync(GEN_DIR)) mkdirSync(GEN_DIR, { recursive: true });
 
 const vertex = createVertex({
   project: process.env.GOOGLE_VERTEX_PROJECT,
