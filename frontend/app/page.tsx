@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   createSession,
   deleteSession,
@@ -13,6 +14,7 @@ import {
   type MessageRecord,
   type SessionRecord,
 } from "../lib/api";
+import { supabase } from "../lib/supabase/client";
 import { SessionList } from "../components/SessionList";
 import { NewSessionModal } from "../components/NewSessionModal";
 import { LibraryDrawer } from "../components/LibraryDrawer";
@@ -49,6 +51,8 @@ function DiamondMark() {
 }
 
 export default function Page() {
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageRecord[]>([]);
@@ -72,6 +76,18 @@ export default function Page() {
     setSessions(list);
     return list;
   }, []);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email ?? null);
+    });
+  }, []);
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   // Forward-declared so openSession can use it for 404 recovery.
   const recoverFromMissingSession = useCallback(
@@ -291,6 +307,18 @@ export default function Page() {
 
         <div className="border-t border-bone-200 px-5 py-4 shrink-0">
           <LibraryDrawer images={images} onUploaded={refreshImages} />
+        </div>
+
+        <div className="border-t border-bone-200 px-5 py-3 shrink-0 flex items-center justify-between gap-2">
+          <span className="text-[11px] text-ink-500 truncate" title={userEmail ?? undefined}>
+            {userEmail ?? "…"}
+          </span>
+          <button
+            onClick={handleSignOut}
+            className="text-[11px] text-ink-500 hover:text-gold-600 transition-colors shrink-0 underline-offset-2 hover:underline"
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 

@@ -1,3 +1,4 @@
+import "./bootstrap-creds"; // MUST be first — writes GCP creds before Vertex clients load
 import { handleUpload } from "./routes/upload";
 import { handleList, handleGet } from "./routes/images";
 import {
@@ -20,12 +21,15 @@ import {
 import { corsHeaders, jsonResponse, errorResponse, preflight } from "./http";
 import { initSchema } from "./db";
 import { assertMeshyConfigured } from "./meshy";
+import { requireUser, assertAuthConfigured, AuthError } from "./auth";
 
 const PORT = Number(process.env.PORT || 3001);
 
 try {
   assertMeshyConfigured();
   console.log("[startup] MESHY_API_KEY configured");
+  assertAuthConfigured();
+  console.log("[startup] Supabase auth configured");
 } catch (err) {
   console.error("[startup]", (err as Error).message);
   process.exit(1);
@@ -57,62 +61,75 @@ const server = Bun.serve({
 
     if (method === "OPTIONS") return preflight();
 
-    try {
-      if (pathname === "/health" && method === "GET") {
-        return jsonResponse({ ok: true });
-      }
+    // /health is the only public route.
+    if (pathname === "/health" && method === "GET") {
+      return jsonResponse({ ok: true });
+    }
 
+    // ─── auth gate: everything below requires a valid Supabase token ───────
+    let userId: string;
+    try {
+      ({ userId } = await requireUser(req));
+    } catch (err) {
+      if (err instanceof AuthError) return errorResponse(401, err.message);
+      console.error("[server] auth error:", err);
+      return errorResponse(500, "Authentication failed");
+    }
+
+    try {
       // ─── library: uploads + browse ───────────────────────────────────────
       if (pathname === "/api/upload" && method === "POST") {
-        return await handleUpload(req);
+        return await handleUpload(req, userId);
       }
       if (pathname === "/api/images" && method === "GET") {
-        return await handleList();
+        return await handleList(userId);
       }
       const imgMatch = pathname.match(imageByIdRe);
       if (imgMatch && method === "GET") {
-        return await attachCors(await handleGet(imgMatch[1]!));
+        return await attachCors(await handleGet(imgMatch[1]!, userId));
       }
 
       // ─── generations: only the per-id GET is needed for inline images ─────
       const genMatch = pathname.match(generatedByIdRe);
       if (genMatch && method === "GET") {
-        return await attachCors(await handleGetGeneration(genMatch[1]!));
+        return await attachCors(await handleGetGeneration(genMatch[1]!, userId));
       }
 
       // ─── models (3D): create from a generation, poll status, stream .glb ─
       if (pathname === "/api/models" && method === "POST") {
-        return await handleCreateModel(req);
+        return await handleCreateModel(req, userId);
       }
       const modelFileMatch = pathname.match(modelFileRe);
       if (modelFileMatch && method === "GET") {
-        return await handleGetModelFile(modelFileMatch[1]!);
+        return await handleGetModelFile(modelFileMatch[1]!, userId);
       }
       const modelMatch = pathname.match(modelByIdRe);
       if (modelMatch && method === "GET") {
-        return await handleGetModel(modelMatch[1]!);
+        return await handleGetModel(modelMatch[1]!, userId);
       }
 
       // ─── sessions + messages ─────────────────────────────────────────────
       if (pathname === "/api/sessions" && method === "GET") {
-        return await handleListSessions();
+        return await handleListSessions(userId);
       }
       if (pathname === "/api/sessions" && method === "POST") {
-        return await handleCreateSession(req);
+        return await handleCreateSession(req, userId);
       }
       const sessMsgMatch = pathname.match(sessionMessagesRe);
       if (sessMsgMatch && method === "POST") {
-        return await handlePostMessage(sessMsgMatch[1]!, req);
+        return await handlePostMessage(sessMsgMatch[1]!, req, userId);
       }
       const sessGenMatch = pathname.match(sessionGenerateRe);
       if (sessGenMatch && method === "POST") {
-        return await handleGenerateFromDraft(sessGenMatch[1]!, req);
+        return await handleGenerateFromDraft(sessGenMatch[1]!, req, userId);
       }
       const sessMatch = pathname.match(sessionByIdRe);
       if (sessMatch) {
-        if (method === "GET") return await handleGetSession(sessMatch[1]!);
-        if (method === "PATCH") return await handleRenameSession(sessMatch[1]!, req);
-        if (method === "DELETE") return await handleDeleteSession(sessMatch[1]!);
+        if (method === "GET") return await handleGetSession(sessMatch[1]!, userId);
+        if (method === "PATCH")
+          return await handleRenameSession(sessMatch[1]!, req, userId);
+        if (method === "DELETE")
+          return await handleDeleteSession(sessMatch[1]!, userId);
       }
 
       return errorResponse(404, `No route for ${method} ${pathname}`);

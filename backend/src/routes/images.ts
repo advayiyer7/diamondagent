@@ -1,11 +1,11 @@
 import { readFileSync, existsSync } from "node:fs";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 
 import { db } from "../db";
 import { images } from "../schema";
 import { jsonResponse, errorResponse } from "../http";
 
-export async function handleList(): Promise<Response> {
+export async function handleList(userId: string): Promise<Response> {
   const rows = await db
     .select({
       id: images.id,
@@ -13,6 +13,7 @@ export async function handleList(): Promise<Response> {
       uploadedAt: images.uploadedAt,
     })
     .from(images)
+    .where(eq(images.userId, userId))
     .orderBy(desc(images.uploadedAt));
 
   return jsonResponse({
@@ -25,8 +26,11 @@ export async function handleList(): Promise<Response> {
   });
 }
 
-export async function handleGet(id: string): Promise<Response> {
-  const [row] = await db.select().from(images).where(eq(images.id, id));
+export async function handleGet(id: string, userId: string): Promise<Response> {
+  const [row] = await db
+    .select()
+    .from(images)
+    .where(and(eq(images.id, id), eq(images.userId, userId)));
   if (!row) return errorResponse(404, "Image not found");
   if (!existsSync(row.path)) return errorResponse(410, "File missing on disk");
 

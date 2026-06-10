@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 import { db } from "../db";
 import { generations } from "../schema";
@@ -11,11 +11,14 @@ import { errorResponse } from "../http";
  * chat agent (POST /api/sessions/:id/messages), so the create/list
  * handlers that used to live here are gone.
  */
-export async function handleGetGeneration(id: string): Promise<Response> {
+export async function handleGetGeneration(
+  id: string,
+  userId: string,
+): Promise<Response> {
   const [row] = await db
     .select()
     .from(generations)
-    .where(eq(generations.id, id));
+    .where(and(eq(generations.id, id), eq(generations.userId, userId)));
   if (!row) return errorResponse(404, "Generated image not found");
   if (!existsSync(row.path)) return errorResponse(410, "File missing on disk");
   const bytes = readFileSync(row.path);

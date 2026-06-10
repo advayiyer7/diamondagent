@@ -3,7 +3,7 @@ import { createVertex } from "@ai-sdk/google-vertex";
 import { z } from "zod";
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { sql, eq, desc } from "drizzle-orm";
+import { sql, eq, desc, and } from "drizzle-orm";
 
 import {
   db,
@@ -134,7 +134,11 @@ type SearchHit = {
   distance: number;
 };
 
-async function vectorSearchByText(query: string, topK: number): Promise<SearchHit[]> {
+async function vectorSearchByText(
+  query: string,
+  topK: number,
+  userId: string,
+): Promise<SearchHit[]> {
   const vec = await embedText(query);
   const rows = await db.execute<{
     id: string;
@@ -146,7 +150,7 @@ async function vectorSearchByText(query: string, topK: number): Promise<SearchHi
     SELECT id, filename, path, mime_type,
            embedding <=> ${JSON.stringify(vec)}::vector AS distance
     FROM images
-    WHERE embedding IS NOT NULL
+    WHERE embedding IS NOT NULL AND user_id = ${userId}::uuid
     ORDER BY embedding <=> ${JSON.stringify(vec)}::vector
     LIMIT ${topK}
   `);
@@ -166,8 +170,9 @@ async function runSearch(
   userMessage: string,
   searchQuery: string,
   history: CoreMessage[],
+  userId: string,
 ): Promise<{ content: string; meta: MessageMeta }> {
-  const hits = await vectorSearchByText(searchQuery, TOP_K);
+  const hits = await vectorSearchByText(searchQuery, TOP_K, userId);
 
   if (hits.length === 0) {
     return {
@@ -261,8 +266,9 @@ function extForMime(mime: string): string {
 
 async function runDesignDraft(
   designPrompt: string,
+  userId: string,
 ): Promise<{ content: string; meta: MessageMeta }> {
-  const hits = await vectorSearchByText(designPrompt, DRAFT_CANDIDATES);
+  const hits = await vectorSearchByText(designPrompt, DRAFT_CANDIDATES, userId);
 
   return {
     content:
@@ -300,8 +306,9 @@ async function runModify(
   sessionId: string,
   message: string,
   modifyBaseId: string,
+  userId: string,
 ): Promise<{ content: string; meta: MessageMeta }> {
-  const base = await getGenerationById(modifyBaseId);
+  const base = await getGenerationById(modifyBaseId, userId);
   if (!base) throw new Error(`Modify base not found: ${modifyBaseId}`);
   if (!existsSync(base.path)) throw new Error("Modify base file missing on disk");
 
@@ -329,6 +336,7 @@ async function runModify(
   const [row] = await db
     .insert(generations)
     .values({
+      userId,
       prompt: message,
       path: "pending",
       mimeType: generated.mimeType,
@@ -370,12 +378,16 @@ async function runModify(
  */
 export async function generateFromDraft(
   sessionId: string,
+  userId: string,
   prompt: string,
   referenceIds: string[],
 ): Promise<{ content: string; meta: MessageMeta }> {
   const refImages: ReferenceImage[] = [];
   for (const refId of referenceIds) {
-    const [img] = await db.select().from(images).where(eq(images.id, refId));
+    const [img] = await db
+      .select()
+      .from(images)
+      .where(and(eq(images.id, refId), eq(images.userId, userId)));
     if (!img)
       throw new Error(`Reference image not found: ${refId}`);
     if (!existsSync(img.path))
@@ -392,6 +404,7 @@ export async function generateFromDraft(
   const [row] = await db
     .insert(generations)
     .values({
+      userId,
       prompt,
       path: "pending",
       mimeType: generated.mimeType,
@@ -435,11 +448,12 @@ export async function generateFromDraft(
 
 async function runModel3d(
   sessionId: string,
+  userId: string,
   explicitTargetId?: string,
 ): Promise<{ content: string; meta: MessageMeta }> {
   const target = explicitTargetId
-    ? await getGenerationById(explicitTargetId)
-    : await getLatestGenerationForSession(sessionId);
+    ? await getGenerationById(explicitTargetId, userId)
+    : await getLatestGenerationForSession(sessionId, userId);
 
   if (!target) {
     return {
@@ -463,6 +477,7 @@ async function runModel3d(
   const row = await insertModel({
     generationId: target.id,
     meshyTaskId: taskId,
+    userId,
   });
 
   // Fire-and-forget. Frontend will poll GET /api/models/:id for live progress.
@@ -541,6 +556,7 @@ export type RunAgentOpts = {
 export async function runAgent(
   sessionId: string,
   userMessage: string,
+  userId: string,
   opts: RunAgentOpts = {},
 ): Promise<AgentResult> {
   // handlePostMessage inserts the user message before calling us; load the
@@ -558,7 +574,7 @@ export async function runAgent(
 
   // Explicit modify: skip the planner.
   if (opts.modifyBaseId) {
-    const out = await runModify(sessionId, userMessage, opts.modifyBaseId);
+    const out = await runModify(sessionId, userMessage, opts.modifyBaseId, userId);
     return {
       content: out.content,
       meta: { ...out.meta, intent: "design", rationale: "Explicit modify from selected image." },
@@ -569,7 +585,7 @@ export async function runAgent(
 
   if (plan.intent === "search") {
     const query = plan.searchQuery?.trim() || userMessage;
-    const out = await runSearch(userMessage, query, history);
+    const out = await runSearch(userMessage, query, history, userId);
     return {
       content: out.content,
       meta: { ...out.meta, intent: "search", rationale: plan.rationale },
@@ -578,7 +594,7 @@ export async function runAgent(
 
   if (plan.intent === "design") {
     const prompt = plan.designPrompt?.trim() || userMessage;
-    const out = await runDesignDraft(prompt);
+    const out = await runDesignDraft(prompt, userId);
     return {
       content: out.content,
       meta: { ...out.meta, intent: "design-draft", rationale: plan.rationale },
@@ -586,7 +602,7 @@ export async function runAgent(
   }
 
   if (plan.intent === "model3d") {
-    const out = await runModel3d(sessionId);
+    const out = await runModel3d(sessionId, userId);
     return {
       content: out.content,
       meta: { ...out.meta, intent: "model3d", rationale: plan.rationale },

@@ -14,3 +14,7 @@ backend/data.db-wal
 backend/data.db-shm
 .DS_Store
 .claude/
+
+# Local-only docs (kept on disk, not pushed)
+DEPLOY.md
+LEARNINGS.md

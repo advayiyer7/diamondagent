@@ -1,6 +1,6 @@
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { sql, eq, desc } from "drizzle-orm";
+import { sql, eq, desc, and } from "drizzle-orm";
 import * as schema from "./schema";
 import {
   models,
@@ -14,7 +14,18 @@ const connectionString =
   process.env.DATABASE_URL ||
   "postgres://diamond:diamond@localhost:5432/diamond_agent";
 
-const client = postgres(connectionString, { max: 10 });
+// Supabase's transaction pooler (host *.pooler.supabase.com, port 6543) does
+// not support prepared statements — postgres-js must run unprepared against it.
+// The direct connection (port 5432) is fine either way. Auto-detect so a pooler
+// URL doesn't fail at runtime with "prepared statement does not exist".
+const usesPooler =
+  /pooler\.supabase\.com/.test(connectionString) ||
+  connectionString.includes(":6543");
+
+const client = postgres(connectionString, {
+  max: 10,
+  prepare: !usesPooler,
+});
 export const db = drizzle(client, { schema });
 
 // We provision schema in code (rather than drizzle-kit migrate) so a fresh
@@ -93,6 +104,28 @@ export async function initSchema(): Promise<void> {
     ON models(generation_id, created_at DESC)
   `);
 
+  // ── Multi-tenant migration ────────────────────────────────────────────────
+  // Every user-owned row carries the Supabase auth user id (JWT `sub`). On a
+  // fresh database the ADD COLUMN runs, the UPDATE touches 0 rows, and SET NOT
+  // NULL succeeds. On a legacy single-user database, pre-existing rows are
+  // backfilled to the all-zeros sentinel user (effectively orphaned / invisible
+  // to every real account) so the NOT NULL constraint can apply. Idempotent.
+  const SENTINEL = "00000000-0000-0000-0000-000000000000";
+  for (const table of ["images", "sessions", "generations", "models"]) {
+    await db.execute(
+      sql`ALTER TABLE ${sql.raw(table)} ADD COLUMN IF NOT EXISTS user_id UUID`,
+    );
+    await db.execute(
+      sql`UPDATE ${sql.raw(table)} SET user_id = ${SENTINEL}::uuid WHERE user_id IS NULL`,
+    );
+    await db.execute(
+      sql`ALTER TABLE ${sql.raw(table)} ALTER COLUMN user_id SET NOT NULL`,
+    );
+    await db.execute(
+      sql`CREATE INDEX IF NOT EXISTS ${sql.raw(table + "_user_idx")} ON ${sql.raw(table)}(user_id)`,
+    );
+  }
+
   // generations.session_id was originally ON DELETE SET NULL — flip it to
   // CASCADE so deleting a session also removes its design history (and via
   // models.generation_id CASCADE, the 3D drafts too). Idempotent: drop the
@@ -113,9 +146,9 @@ export async function initSchema(): Promise<void> {
 
 // ─── sessions helpers ───────────────────────────────────────────────────────
 
-export async function countSessions(): Promise<number> {
+export async function countSessions(userId: string): Promise<number> {
   const [row] = await db.execute<{ count: number }>(
-    sql`SELECT count(*)::int AS count FROM sessions`,
+    sql`SELECT count(*)::int AS count FROM sessions WHERE user_id = ${userId}::uuid`,
   );
   return Number(row?.count ?? 0);
 }
@@ -124,20 +157,29 @@ export async function countSessions(): Promise<number> {
 
 export async function getLatestGenerationForSession(
   sessionId: string,
+  userId: string,
 ): Promise<GenerationRow | null> {
   const [row] = await db
     .select()
     .from(generations)
-    .where(eq(generations.sessionId, sessionId))
+    .where(
+      and(eq(generations.sessionId, sessionId), eq(generations.userId, userId)),
+    )
     .orderBy(desc(generations.createdAt))
     .limit(1);
   return row ?? null;
 }
 
+// Ownership-checked: returns null if the row belongs to another user, so
+// callers can treat "not yours" identically to "not found".
 export async function getGenerationById(
   id: string,
+  userId: string,
 ): Promise<GenerationRow | null> {
-  const [row] = await db.select().from(generations).where(eq(generations.id, id));
+  const [row] = await db
+    .select()
+    .from(generations)
+    .where(and(eq(generations.id, id), eq(generations.userId, userId)));
   return row ?? null;
 }
 
@@ -146,12 +188,14 @@ export async function getGenerationById(
 export async function insertModel(args: {
   generationId: string;
   meshyTaskId: string;
+  userId: string;
 }): Promise<ModelRow> {
   const [row] = await db
     .insert(models)
     .values({
       generationId: args.generationId,
       meshyTaskId: args.meshyTaskId,
+      userId: args.userId,
       status: "pending",
       progress: 0,
     })

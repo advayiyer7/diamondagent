@@ -21,7 +21,10 @@ function extFor(mime: string, filename: string): string {
   return ".bin";
 }
 
-export async function handleUpload(req: Request): Promise<Response> {
+export async function handleUpload(
+  req: Request,
+  userId: string,
+): Promise<Response> {
   let form: FormData;
   try {
     form = await req.formData();
@@ -60,6 +63,7 @@ export async function handleUpload(req: Request): Promise<Response> {
   const [row] = await db
     .insert(images)
     .values({
+      userId,
       filename: file.name,
       path: "pending",
       mimeType: file.type,

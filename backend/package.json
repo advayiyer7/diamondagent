@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@ai-sdk/google-vertex": "^2.2.0",
+    "@supabase/supabase-js": "^2.108.1",
     "ai": "^4.0.0",
     "drizzle-orm": "^0.36.0",
     "google-auth-library": "^9.0.0",

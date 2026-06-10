@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and } from "drizzle-orm";
 
 import { db, countSessions } from "../db";
 import { sessions, messages, type MessageMeta } from "../schema";
@@ -28,16 +28,20 @@ function serializeMessage(row: typeof messages.$inferSelect) {
   };
 }
 
-export async function handleListSessions(): Promise<Response> {
+export async function handleListSessions(userId: string): Promise<Response> {
   const rows = await db
     .select()
     .from(sessions)
+    .where(eq(sessions.userId, userId))
     .orderBy(desc(sessions.updatedAt));
   return jsonResponse({ sessions: rows.map(serializeSession) });
 }
 
-export async function handleCreateSession(req: Request): Promise<Response> {
-  const existing = await countSessions();
+export async function handleCreateSession(
+  req: Request,
+  userId: string,
+): Promise<Response> {
+  const existing = await countSessions(userId);
   if (existing >= SESSION_CAP) {
     return jsonResponse(
       {
@@ -60,13 +64,22 @@ export async function handleCreateSession(req: Request): Promise<Response> {
       ? body.title.trim().slice(0, 80)
       : "New conversation";
 
-  const [row] = await db.insert(sessions).values({ title }).returning();
+  const [row] = await db
+    .insert(sessions)
+    .values({ title, userId })
+    .returning();
   if (!row) return errorResponse(500, "Failed to create session");
   return jsonResponse(serializeSession(row));
 }
 
-export async function handleGetSession(id: string): Promise<Response> {
-  const [s] = await db.select().from(sessions).where(eq(sessions.id, id));
+export async function handleGetSession(
+  id: string,
+  userId: string,
+): Promise<Response> {
+  const [s] = await db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.id, id), eq(sessions.userId, userId)));
   if (!s) return errorResponse(404, "Session not found");
   const msgs = await db
     .select()
@@ -82,6 +95,7 @@ export async function handleGetSession(id: string): Promise<Response> {
 export async function handleRenameSession(
   id: string,
   req: Request,
+  userId: string,
 ): Promise<Response> {
   let body: { title?: unknown };
   try {
@@ -96,16 +110,19 @@ export async function handleRenameSession(
   const [row] = await db
     .update(sessions)
     .set({ title: title.trim().slice(0, 80), updatedAt: new Date() })
-    .where(eq(sessions.id, id))
+    .where(and(eq(sessions.id, id), eq(sessions.userId, userId)))
     .returning();
   if (!row) return errorResponse(404, "Session not found");
   return jsonResponse(serializeSession(row));
 }
 
-export async function handleDeleteSession(id: string): Promise<Response> {
+export async function handleDeleteSession(
+  id: string,
+  userId: string,
+): Promise<Response> {
   const [row] = await db
     .delete(sessions)
-    .where(eq(sessions.id, id))
+    .where(and(eq(sessions.id, id), eq(sessions.userId, userId)))
     .returning({ id: sessions.id });
   if (!row) return errorResponse(404, "Session not found");
   return jsonResponse({ ok: true, id: row.id });
@@ -114,6 +131,7 @@ export async function handleDeleteSession(id: string): Promise<Response> {
 export async function handlePostMessage(
   id: string,
   req: Request,
+  userId: string,
 ): Promise<Response> {
   let body: { message?: unknown; modifyBaseId?: unknown };
   try {
@@ -133,7 +151,10 @@ export async function handlePostMessage(
     modifyBaseId = body.modifyBaseId;
   }
 
-  const [s] = await db.select().from(sessions).where(eq(sessions.id, id));
+  const [s] = await db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.id, id), eq(sessions.userId, userId)));
   if (!s) return errorResponse(404, "Session not found");
 
   // Persist the user's message first so the agent's history reflects it on retry.
@@ -151,7 +172,7 @@ export async function handlePostMessage(
 
   let agent;
   try {
-    agent = await runAgent(id, message.trim(), { modifyBaseId });
+    agent = await runAgent(id, message.trim(), userId, { modifyBaseId });
   } catch (err) {
     console.error("[sessions] agent failed:", err);
     return errorResponse(500, `Agent failed: ${(err as Error).message}`);
@@ -188,6 +209,7 @@ export async function handlePostMessage(
 export async function handleGenerateFromDraft(
   id: string,
   req: Request,
+  userId: string,
 ): Promise<Response> {
   let body: { prompt?: unknown; referenceIds?: unknown };
   try {
@@ -212,12 +234,15 @@ export async function handleGenerateFromDraft(
     }
   }
 
-  const [s] = await db.select().from(sessions).where(eq(sessions.id, id));
+  const [s] = await db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.id, id), eq(sessions.userId, userId)));
   if (!s) return errorResponse(404, "Session not found");
 
   let generated;
   try {
-    generated = await generateFromDraft(id, prompt.trim(), referenceIds);
+    generated = await generateFromDraft(id, userId, prompt.trim(), referenceIds);
   } catch (err) {
     console.error("[sessions] generate-from-draft failed:", err);
     return errorResponse(500, `Generation failed: ${(err as Error).message}`);

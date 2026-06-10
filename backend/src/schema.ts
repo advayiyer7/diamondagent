@@ -9,8 +9,13 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
+// `userId` is the Supabase auth user id (the JWT `sub` claim). There's no
+// local users table — identity lives in Supabase Auth — so it's a plain
+// indexed column, not a foreign key. Every user-owned row carries it and
+// every query is scoped by it. See backend/src/auth.ts.
 export const images = pgTable("images", {
   id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
   filename: text("filename").notNull(),
   path: text("path").notNull(),
   mimeType: text("mime_type").notNull(),
@@ -22,6 +27,7 @@ export const images = pgTable("images", {
 
 export const sessions = pgTable("sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
   title: text("title").notNull().default("New conversation"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
@@ -84,6 +90,7 @@ export const messages = pgTable("messages", {
 
 export const generations = pgTable("generations", {
   id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
   prompt: text("prompt").notNull(),
   path: text("path").notNull(),
   mimeType: text("mime_type").notNull(),
@@ -106,6 +113,7 @@ export type ModelStatus = "pending" | "processing" | "completed" | "failed";
 
 export const models = pgTable("models", {
   id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
   generationId: uuid("generation_id")
     .notNull()
     .references(() => generations.id, { onDelete: "cascade" }),

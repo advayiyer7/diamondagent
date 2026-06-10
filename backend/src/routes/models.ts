@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync, createReadStream } from "node:fs";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 import { db, getModel, insertModel } from "../db";
 import { generations } from "../schema";
@@ -16,7 +16,10 @@ function imageBytesToDataUri(bytes: Buffer, mimeType: string): string {
 // ─── POST /api/models ───────────────────────────────────────────────────────
 // Triggered by the 3D button on a generated design message.
 
-export async function handleCreateModel(req: Request): Promise<Response> {
+export async function handleCreateModel(
+  req: Request,
+  userId: string,
+): Promise<Response> {
   let body: { generationId?: unknown };
   try {
     body = (await req.json()) as { generationId?: unknown };
@@ -32,7 +35,7 @@ export async function handleCreateModel(req: Request): Promise<Response> {
   const [gen] = await db
     .select()
     .from(generations)
-    .where(eq(generations.id, generationId));
+    .where(and(eq(generations.id, generationId), eq(generations.userId, userId)));
   if (!gen) return errorResponse(404, `Generation not found: ${generationId}`);
   if (!existsSync(gen.path))
     return errorResponse(410, "Generated image file missing on disk");
@@ -49,7 +52,7 @@ export async function handleCreateModel(req: Request): Promise<Response> {
     return errorResponse(502, `Meshy task creation failed: ${(err as Error).message}`);
   }
 
-  const row = await insertModel({ generationId, meshyTaskId: taskId });
+  const row = await insertModel({ generationId, meshyTaskId: taskId, userId });
 
   // Fire-and-forget. Frontend polls GET /api/models/:id for live progress.
   void pollMeshyJob(row.id, taskId).catch((err) => {
@@ -91,10 +94,13 @@ function modelRowToJson(row: {
 // ─── GET /api/models/:id ────────────────────────────────────────────────────
 // Returns the live model row so the chat can poll for status + progress.
 
-export async function handleGetModel(id: string): Promise<Response> {
+export async function handleGetModel(
+  id: string,
+  userId: string,
+): Promise<Response> {
   if (!UUID_RE.test(id)) return errorResponse(400, "Invalid model id");
   const row = await getModel(id);
-  if (!row) return errorResponse(404, "Model not found");
+  if (!row || row.userId !== userId) return errorResponse(404, "Model not found");
   return jsonResponse(modelRowToJson(row));
 }
 
@@ -102,10 +108,13 @@ export async function handleGetModel(id: string): Promise<Response> {
 // Streams the downloaded .glb. CORS headers attached inline because the
 // shared `attachCors` helper would buffer the whole file.
 
-export async function handleGetModelFile(id: string): Promise<Response> {
+export async function handleGetModelFile(
+  id: string,
+  userId: string,
+): Promise<Response> {
   if (!UUID_RE.test(id)) return errorResponse(400, "Invalid model id");
   const row = await getModel(id);
-  if (!row) return errorResponse(404, "Model not found");
+  if (!row || row.userId !== userId) return errorResponse(404, "Model not found");
   if (row.status !== "completed" || !row.path) {
     return errorResponse(409, `Model not ready (status: ${row.status})`);
   }

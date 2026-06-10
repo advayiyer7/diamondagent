@@ -1,5 +1,47 @@
+import { supabase } from "./supabase/client";
+
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || "http://localhost:3001";
+
+// ─── auth ──────────────────────────────────────────────────────────────────
+// Every backend call carries the Supabase access token. For fetch() requests
+// we send it as a Bearer header; for <img>/3D-model URLs (which can't set
+// headers) we append it as ?token=. The cached copy is kept fresh by the auth
+// state subscription so the synchronous url builders stay synchronous.
+
+let cachedToken: string | null = null;
+
+if (typeof window !== "undefined") {
+  supabase.auth.getSession().then(({ data }) => {
+    cachedToken = data.session?.access_token ?? null;
+  });
+  supabase.auth.onAuthStateChange((_event, session) => {
+    cachedToken = session?.access_token ?? null;
+  });
+}
+
+async function freshToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token ?? null;
+  cachedToken = token;
+  return token;
+}
+
+async function authedFetch(
+  input: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const headers = new Headers(init.headers);
+  const token = await freshToken();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return fetch(input, { ...init, headers });
+}
+
+function withToken(absoluteUrl: string): string {
+  if (!cachedToken) return absoluteUrl;
+  const sep = absoluteUrl.includes("?") ? "&" : "?";
+  return `${absoluteUrl}${sep}token=${encodeURIComponent(cachedToken)}`;
+}
 
 // ─── library (images) ─────────────────────────────────────────────────────
 
@@ -11,11 +53,11 @@ export type ImageRecord = {
 };
 
 export function imageUrl(rel: string): string {
-  return rel.startsWith("http") ? rel : `${API_BASE}${rel}`;
+  return withToken(rel.startsWith("http") ? rel : `${API_BASE}${rel}`);
 }
 
 export async function listImages(): Promise<ImageRecord[]> {
-  const res = await fetch(`${API_BASE}/api/images`, { cache: "no-store" });
+  const res = await authedFetch(`${API_BASE}/api/images`, { cache: "no-store" });
   if (!res.ok) throw new Error(`listImages failed: ${res.status}`);
   const json = (await res.json()) as { images: ImageRecord[] };
   return json.images;
@@ -24,7 +66,7 @@ export async function listImages(): Promise<ImageRecord[]> {
 export async function uploadImage(file: File): Promise<ImageRecord> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch(`${API_BASE}/api/upload`, {
+  const res = await authedFetch(`${API_BASE}/api/upload`, {
     method: "POST",
     body: form,
   });
@@ -54,14 +96,14 @@ export class SessionCapError extends Error {
 }
 
 export async function listSessions(): Promise<SessionRecord[]> {
-  const res = await fetch(`${API_BASE}/api/sessions`, { cache: "no-store" });
+  const res = await authedFetch(`${API_BASE}/api/sessions`, { cache: "no-store" });
   if (!res.ok) throw new Error(`listSessions failed: ${res.status}`);
   const json = (await res.json()) as { sessions: SessionRecord[] };
   return json.sessions;
 }
 
 export async function createSession(): Promise<SessionRecord> {
-  const res = await fetch(`${API_BASE}/api/sessions`, {
+  const res = await authedFetch(`${API_BASE}/api/sessions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}",
@@ -84,7 +126,7 @@ export async function createSession(): Promise<SessionRecord> {
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/sessions/${id}`, { method: "DELETE" });
+  const res = await authedFetch(`${API_BASE}/api/sessions/${id}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`deleteSession failed (${res.status}): ${err}`);
@@ -92,7 +134,7 @@ export async function deleteSession(id: string): Promise<void> {
 }
 
 export async function renameSession(id: string, title: string): Promise<SessionRecord> {
-  const res = await fetch(`${API_BASE}/api/sessions/${id}`, {
+  const res = await authedFetch(`${API_BASE}/api/sessions/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ title }),
@@ -152,7 +194,7 @@ export type MessageRecord = {
 export async function getSession(
   id: string,
 ): Promise<{ session: SessionRecord; messages: MessageRecord[] }> {
-  const res = await fetch(`${API_BASE}/api/sessions/${id}`, { cache: "no-store" });
+  const res = await authedFetch(`${API_BASE}/api/sessions/${id}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`getSession failed: ${res.status}`);
   return (await res.json()) as {
     session: SessionRecord;
@@ -165,7 +207,7 @@ export async function postMessage(
   message: string,
   opts: { modifyBaseId?: string } = {},
 ): Promise<{ userMessage: MessageRecord; assistantMessage: MessageRecord | null }> {
-  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/messages`, {
+  const res = await authedFetch(`${API_BASE}/api/sessions/${sessionId}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -188,7 +230,7 @@ export async function generateFromDraft(
   prompt: string,
   referenceIds: string[],
 ): Promise<MessageRecord> {
-  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/generate`, {
+  const res = await authedFetch(`${API_BASE}/api/sessions/${sessionId}/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, referenceIds }),
@@ -217,7 +259,7 @@ export type ModelRecord = {
 };
 
 export async function createModel(generationId: string): Promise<ModelRecord> {
-  const res = await fetch(`${API_BASE}/api/models`, {
+  const res = await authedFetch(`${API_BASE}/api/models`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ generationId }),
@@ -230,7 +272,7 @@ export async function createModel(generationId: string): Promise<ModelRecord> {
 }
 
 export async function getModel(id: string): Promise<ModelRecord> {
-  const res = await fetch(`${API_BASE}/api/models/${id}`, { cache: "no-store" });
+  const res = await authedFetch(`${API_BASE}/api/models/${id}`, { cache: "no-store" });
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`getModel failed (${res.status}): ${err}`);
@@ -239,5 +281,5 @@ export async function getModel(id: string): Promise<ModelRecord> {
 }
 
 export function modelFileUrl(rel: string): string {
-  return rel.startsWith("http") ? rel : `${API_BASE}${rel}`;
+  return withToken(rel.startsWith("http") ? rel : `${API_BASE}${rel}`);
 }
