@@ -8,17 +8,13 @@ type Mode = "signin" | "signup";
 
 function DiamondMark() {
   return (
-    <svg viewBox="0 0 32 32" width="34" height="34" aria-hidden>
-      <defs>
-        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#e6cc7a" />
-          <stop offset="50%" stopColor="#d4b352" />
-          <stop offset="100%" stopColor="#9a7619" />
-        </linearGradient>
-      </defs>
-      <path d="M6 12 L16 4 L26 12 L16 28 Z" fill="url(#lg)" stroke="rgba(26,22,17,0.18)" strokeWidth="0.5" />
-      <path d="M6 12 L26 12" stroke="rgba(26,22,17,0.18)" strokeWidth="0.5" fill="none" />
-    </svg>
+    <img
+      src="/logo.png"
+      alt="Diamond Agent logo"
+      width={56}
+      height={56}
+      className="w-14 h-14 rounded-xl object-cover shadow-md"
+    />
   );
 }
 

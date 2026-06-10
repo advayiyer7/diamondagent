@@ -23,30 +23,13 @@ import { ChatComposer, type ModifyBase } from "../components/ChatComposer";
 
 function DiamondMark() {
   return (
-    <svg
-      viewBox="0 0 32 32"
-      width="26"
-      height="26"
-      aria-hidden
-      className="drop-shadow-[0_1px_2px_rgba(184,144,40,0.25)]"
-    >
-      <defs>
-        <linearGradient id="dg" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#e6cc7a" />
-          <stop offset="50%" stopColor="#d4b352" />
-          <stop offset="100%" stopColor="#9a7619" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M6 12 L16 4 L26 12 L16 28 Z"
-        fill="url(#dg)"
-        stroke="rgba(26,22,17,0.18)"
-        strokeWidth="0.5"
-      />
-      <path d="M6 12 L26 12" stroke="rgba(26,22,17,0.18)" strokeWidth="0.5" fill="none" />
-      <path d="M16 4 L11 12 L16 28" stroke="rgba(26,22,17,0.12)" strokeWidth="0.5" fill="none" />
-      <path d="M16 4 L21 12 L16 28" stroke="rgba(26,22,17,0.12)" strokeWidth="0.5" fill="none" />
-    </svg>
+    <img
+      src="/logo.png"
+      alt="Diamond Agent logo"
+      width={32}
+      height={32}
+      className="w-8 h-8 rounded-lg object-cover shadow-sm"
+    />
   );
 }
 

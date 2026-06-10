@@ -18,3 +18,4 @@ backend/data.db-shm
 # Local-only docs (kept on disk, not pushed)
 DEPLOY.md
 LEARNINGS.md
+PORTFOLIO.md
