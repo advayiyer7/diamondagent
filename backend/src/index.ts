@@ -18,7 +18,13 @@ import {
   handlePostMessage,
   handleGenerateFromDraft,
 } from "./routes/sessions";
-import { corsHeaders, jsonResponse, errorResponse, preflight } from "./http";
+import {
+  corsHeaders,
+  resolveOrigin,
+  jsonResponse,
+  errorResponse,
+  preflight,
+} from "./http";
 import { initSchema } from "./db";
 import { assertMeshyConfigured } from "./meshy";
 import { requireUser, assertAuthConfigured, AuthError } from "./auth";
@@ -52,14 +58,12 @@ async function attachCors(res: Response): Promise<Response> {
   return new Response(await res.arrayBuffer(), { status: res.status, headers });
 }
 
-const server = Bun.serve({
-  port: PORT,
-  async fetch(req) {
+async function routeRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const { pathname } = url;
     const method = req.method;
 
-    if (method === "OPTIONS") return preflight();
+    if (method === "OPTIONS") return preflight(req.headers.get("origin"));
 
     // /health is the only public route.
     if (pathname === "/health" && method === "GET") {
@@ -137,6 +141,20 @@ const server = Bun.serve({
       console.error("[server] unhandled error:", err);
       return errorResponse(500, (err as Error).message);
     }
+}
+
+const server = Bun.serve({
+  port: PORT,
+  async fetch(req) {
+    // Route, then stamp the correct per-request CORS origin on the way out so
+    // every Vercel deploy URL (and any configured origin) is accepted. The
+    // response helpers bake a fallback origin; this overrides it with the one
+    // that actually matches this request.
+    const reqOrigin = req.headers.get("origin");
+    const res = await routeRequest(req);
+    res.headers.set("Access-Control-Allow-Origin", resolveOrigin(reqOrigin));
+    res.headers.set("Vary", "Origin");
+    return res;
   },
 });
 
