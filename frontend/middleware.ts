@@ -4,6 +4,19 @@ import { NextResponse, type NextRequest } from "next/server";
 // Refreshes the Supabase session on every request and gates the app: signed-out
 // users are bounced to /login; signed-in users hitting /login go to the studio.
 export async function middleware(request: NextRequest) {
+  // Email-confirmation / OAuth links can land on the root with a ?code= param
+  // (e.g. when Supabase falls back to the Site URL instead of the explicit
+  // redirect). Forward those to /auth/callback, which exchanges the code for a
+  // session. Keeps login working even if the redirect URL list is incomplete.
+  if (
+    request.nextUrl.pathname === "/" &&
+    request.nextUrl.searchParams.has("code")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/callback";
+    return NextResponse.redirect(url);
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
